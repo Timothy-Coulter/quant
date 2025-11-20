@@ -1,0 +1,7 @@
+__config_class__: IndicatorConfig
+indicator_name: ema_fast
+factory_name: ema
+indicator_type: trend
+period: 12
+ma_type: exponential
+price_column: close

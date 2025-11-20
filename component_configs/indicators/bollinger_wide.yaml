@@ -1,0 +1,7 @@
+__config_class__: IndicatorConfig
+indicator_name: bollinger_wide
+factory_name: bollinger_bands
+indicator_type: volatility
+period: 20
+standard_deviations: 2.5
+ma_type: simple

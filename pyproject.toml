@@ -32,6 +32,7 @@ dependencies = [
   "ipykernel>=6.29",
   "jupyterlab>=4.2",
   "notebook>=7.0",
+  "findatapy>=0.1.40",
 ]
 
 [project.optional-dependencies]
@@ -59,6 +60,21 @@ dev = [
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["backtester*"]
+exclude = [
+  "tests*",
+  "unit_tests*",
+  "smoke_tests*",
+  "docs*",
+  "examples*",
+  "component_configs*",
+  "datasets*",
+  "data*",
+  "misc*",
+]
 
 [tool.black]
 line-length = 100
@@ -102,8 +118,10 @@ python_version = "3.12"
 # --- Performance settings ---
 incremental = true
 cache_dir = ".mypy_cache"
-follow_imports = "skip"
+# Follow stdlib/typed imports so enums/logging/etc. have proper types
+follow_imports = "normal"
 follow_imports_for_stubs = true
+explicit_package_bases = true
 
 # Avoid analyzing huge ML libraries
 ignore_missing_imports = true
@@ -123,6 +141,17 @@ warn_unreachable = true
 # --- Pydantic plugin ---
 plugins = ["pydantic.mypy"]
 
+[[tool.mypy.overrides]]
+module = [
+    "backtester.strategy.*",
+    "backtester.portfolio.*",
+    "backtester.risk_management.*",
+    "backtester.execution.*",
+    "backtester.model.*",
+    "backtester.indicators.*",
+]
+follow_imports = "skip"
+
 
 [tool.pydantic-mypy]
 init_forbid_extra = true
@@ -136,3 +165,11 @@ addopts = [
     "--reruns-delay", "0.1"          # pytest-rerunfailures: 0.1 second delay between retries
 ]
 testpaths = ["tests", "unit_tests"]
+
+[dependency-groups]
+dev = [
+    "black>=25.11.0",
+    "isort>=7.0.0",
+    "mypy>=1.18.2",
+    "ruff>=0.14.5",
+]

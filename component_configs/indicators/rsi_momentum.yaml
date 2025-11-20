@@ -1,0 +1,7 @@
+__config_class__: IndicatorConfig
+indicator_name: rsi
+factory_name: rsi
+indicator_type: momentum
+period: 14
+overbought_threshold: 70
+oversold_threshold: 30
