@@ -4,10 +4,12 @@ This module contains Pydantic configuration models for portfolio strategies,
 including constraints, optimization parameters, and risk budgets.
 """
 
+from collections.abc import Mapping
+from copy import deepcopy
 from enum import Enum
-from typing import Any
+from typing import Any, cast
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 
 class PortfolioStrategyType(str, Enum):
@@ -93,7 +95,7 @@ class SignalFilterConfig(BaseModel):
 
     @field_validator('max_confidence')
     @classmethod
-    def max_confidence_must_be_ge_min(cls, v: float, info) -> float:
+    def max_confidence_must_be_ge_min(cls, v: float, info: ValidationInfo) -> float:
         """Ensure `max_confidence` is not below `min_confidence`."""
         if info.data.get('min_confidence') is not None and v < info.data['min_confidence']:
             raise ValueError('max_confidence must be >= min_confidence')
@@ -101,7 +103,7 @@ class SignalFilterConfig(BaseModel):
 
     @field_validator('max_strength')
     @classmethod
-    def max_strength_must_be_ge_min(cls, v: float, info) -> float:
+    def max_strength_must_be_ge_min(cls, v: float, info: ValidationInfo) -> float:
         """Ensure `max_strength` is not below `min_strength`."""
         if info.data.get('min_strength') is not None and v < info.data['min_strength']:
             raise ValueError('max_strength must be >= min_strength')
@@ -109,7 +111,7 @@ class SignalFilterConfig(BaseModel):
 
     @field_validator('max_signal_duration')
     @classmethod
-    def max_signal_duration_must_be_ge_min(cls, v: int, info) -> int:
+    def max_signal_duration_must_be_ge_min(cls, v: int, info: ValidationInfo) -> int:
         """Ensure `max_signal_duration` is not below `min_signal_duration`."""
         if (
             info.data.get('min_signal_duration') is not None
@@ -133,7 +135,7 @@ class PortfolioConstraints(BaseModel):
 
     @field_validator('max_weight')
     @classmethod
-    def max_weight_must_be_ge_min(cls, v: float, info) -> float:
+    def max_weight_must_be_ge_min(cls, v: float, info: ValidationInfo) -> float:
         """Ensure `max_weight` is not below `min_weight`."""
         if info.data.get('min_weight') is not None and v < info.data['min_weight']:
             raise ValueError('max_weight must be >= min_weight')
@@ -141,7 +143,7 @@ class PortfolioConstraints(BaseModel):
 
     @field_validator('max_position_size')
     @classmethod
-    def max_position_size_must_be_ge_min(cls, v: float, info) -> float:
+    def max_position_size_must_be_ge_min(cls, v: float, info: ValidationInfo) -> float:
         """Ensure `max_position_size` is not below `min_position_size`."""
         if info.data.get('min_position_size') is not None and v < info.data['min_position_size']:
             raise ValueError('max_position_size must be >= min_position_size')
@@ -182,10 +184,12 @@ class PortfolioOptimizationParams(BaseModel):
     rebalance_threshold: float = Field(default=0.05, ge=0.0, le=1.0)
     min_samples: int = Field(default=30, ge=1)
     max_samples: int | None = Field(default=None, ge=1)
+    max_iterations: int = Field(default=500, ge=1)
+    convergence_tolerance: float = Field(default=1e-6, ge=0.0)
 
     @field_validator('max_samples')
     @classmethod
-    def max_samples_must_be_ge_min(cls, v: int | None, info) -> int | None:
+    def max_samples_must_be_ge_min(cls, v: int | None, info: ValidationInfo) -> int | None:
         """Ensure `max_samples` is not below `min_samples`."""
         if (
             info.data.get('min_samples') is not None
@@ -268,6 +272,10 @@ class PerformanceMetrics(BaseModel):
     calculate_commission: bool = Field(default=True)
 
 
+SignalFilterConfigInput = SignalFilterConfig | Mapping[str, Any]
+RiskBudgetInput = RiskBudget | Mapping[str, Any]
+
+
 class PortfolioStrategyConfig(BaseModel):
     """Portfolio strategy configuration."""
 
@@ -278,9 +286,9 @@ class PortfolioStrategyConfig(BaseModel):
     optimization_params: PortfolioOptimizationParams = Field(
         default_factory=PortfolioOptimizationParams
     )
-    risk_budget: RiskBudget = Field(default_factory=RiskBudget)
+    risk_budget: RiskBudgetInput = Field(default_factory=RiskBudget)
     risk_parameters: RiskParameters = Field(default_factory=RiskParameters)
-    signal_filters: SignalFilterConfig = Field(default_factory=SignalFilterConfig)
+    signal_filters: SignalFilterConfigInput = Field(default_factory=SignalFilterConfig)
     performance_metrics: PerformanceMetrics = Field(default_factory=PerformanceMetrics)
     rebalance_frequency: RebalanceFrequency = Field(default=RebalanceFrequency.WEEKLY)
     enable_rebalancing: bool = Field(default=True)
@@ -299,7 +307,7 @@ class PortfolioStrategyConfig(BaseModel):
 
     @field_validator('max_position_size')
     @classmethod
-    def max_position_size_must_be_ge_min(cls, v: float, info) -> float:
+    def max_position_size_must_be_ge_min(cls, v: float, info: ValidationInfo) -> float:
         """Ensure global max position size is at least the configured minimum."""
         if info.data.get('min_position_size') is not None and v < info.data['min_position_size']:
             raise ValueError('max_position_size must be >= min_position_size')
@@ -360,7 +368,8 @@ class PortfolioStrategyConfig(BaseModel):
 
     def get_risk_budget(self) -> dict[str, float]:
         """Get risk budget for symbols."""
-        return self.risk_budget.get_risk_budget()
+        budget = cast(RiskBudget, self.risk_budget)
+        return budget.get_risk_budget()
 
     def to_dict(self) -> dict[str, Any]:
         """Convert configuration to dictionary."""
@@ -392,9 +401,20 @@ class PortfolioStrategyConfig(BaseModel):
             print(f"Configuration validation failed: {e}")
             return False
 
-    def copy(self) -> 'PortfolioStrategyConfig':
+    def copy(
+        self,
+        *,
+        include: Any = None,
+        exclude: Any = None,
+        update: dict[str, Any] | None = None,
+        deep: bool = False,
+    ) -> 'PortfolioStrategyConfig':
         """Create a copy of the configuration."""
-        return self.model_copy(deep=True)
+        snapshot = self.model_dump(include=include, exclude=exclude)
+        if update:
+            snapshot.update(update)
+        payload = deepcopy(snapshot) if deep else dict(snapshot)
+        return self.model_validate(payload)
 
     def update(self, **kwargs: Any) -> 'PortfolioStrategyConfig':
         """Update configuration with new values."""
@@ -404,8 +424,28 @@ class PortfolioStrategyConfig(BaseModel):
 
     def __str__(self) -> str:
         """String representation of the configuration."""
-        return f"PortfolioStrategyConfig(name='{self.strategy_name}', type='{self.strategy_type}', symbols={self.symbols})"
+        strategy_type = getattr(self.strategy_type, 'value', self.strategy_type)
+        return (
+            "PortfolioStrategyConfig("
+            f"name='{self.strategy_name}', type='{strategy_type}', symbols={self.symbols})"
+        )
 
     def __repr__(self) -> str:
         """String representation of the configuration."""
         return self.__str__()
+
+    @field_validator('signal_filters', mode='before')
+    @classmethod
+    def normalize_signal_filters(cls, value: SignalFilterConfigInput) -> SignalFilterConfig:
+        """Allow plain dictionaries for signal filter configuration."""
+        if isinstance(value, Mapping):
+            return SignalFilterConfig(**dict(value))
+        return value
+
+    @field_validator('risk_budget', mode='before')
+    @classmethod
+    def normalize_risk_budget(cls, value: RiskBudgetInput) -> RiskBudget:
+        """Allow dictionaries for risk budget configuration."""
+        if isinstance(value, Mapping):
+            return RiskBudget(**dict(value))
+        return value

@@ -1,5 +1,6 @@
 """Tests for base signal strategy class."""
 
+from typing import Any, cast
 from unittest.mock import Mock
 
 import numpy as np
@@ -7,7 +8,7 @@ import pandas as pd
 import pytest
 
 from backtester.core.event_bus import EventBus
-from backtester.core.events import MarketDataEvent, SignalEvent, SignalType
+from backtester.core.events import MarketDataEvent, MarketDataType, SignalEvent, SignalType
 from backtester.strategy.signal.ml_model_strategy import MLModelStrategy
 from backtester.strategy.signal.signal_strategy_config import (
     ExecutionParameters,
@@ -55,7 +56,7 @@ class TestBaseSignalStrategy:
                 momentum_indicators=["RSI", "Stochastic"],
                 volatility_indicators=["BollingerBands", "ATR"],
                 volume_indicators=["OBV", "VolumeSMA"],
-                signal_generation_rules="trend_following",
+                signal_generation_rules=cast(Any, "trend_following"),
             ),
         )
 
@@ -104,7 +105,7 @@ class TestBaseSignalStrategy:
             momentum_indicators=["RSI", "Stochastic"],
             volatility_indicators=["BollingerBands", "ATR"],
             volume_indicators=["OBV", "VolumeSMA"],
-            signal_generation_rules="trend_following",
+            signal_generation_rules=cast(Any, "trend_following"),
         )
 
         # Test TechnicalAnalysisStrategy initialization with indicators
@@ -168,6 +169,7 @@ class TestBaseSignalStrategy:
         # Note: The MLModelStrategy doesn't initialize models by default in the constructor
         # This test verifies the strategy can be created without errors
         assert strategy.config == config
+        assert isinstance(strategy.config, SignalStrategyConfig)
         assert strategy.config.strategy_config == nested_config
         assert strategy.event_bus == mock_event_bus
 
@@ -194,7 +196,8 @@ class TestBaseSignalStrategy:
         strategy = TechnicalAnalysisStrategy(basic_config.strategy_config, mock_event_bus)
 
         # Mock the generate_signals method
-        strategy.generate_signals = Mock(return_value=[])
+        mock_generate = Mock(return_value=[])
+        object.__setattr__(strategy, "generate_signals", mock_generate)
 
         # Create a market data event
         event = MarketDataEvent(
@@ -202,7 +205,7 @@ class TestBaseSignalStrategy:
             timestamp=1640995200.0,
             source="market_data_feed",
             symbol="AAPL",
-            data_type="bar",
+            data_type=MarketDataType.BAR,
             open_price=150.0,
             high_price=155.0,
             low_price=148.0,
@@ -214,8 +217,8 @@ class TestBaseSignalStrategy:
         strategy._handle_market_data_event(event)
 
         # Check that generate_signals was called
-        strategy.generate_signals.assert_called_once()
-        args = strategy.generate_signals.call_args[0]
+        mock_generate.assert_called_once()
+        args = mock_generate.call_args[0]
         assert args[0] is not None  # DataFrame should be passed
         assert args[1] == "AAPL"
 
@@ -382,7 +385,7 @@ class TestBaseSignalStrategy:
             momentum_indicators=["RSI", "Stochastic"],
             volatility_indicators=["BollingerBands", "ATR"],
             volume_indicators=["OBV", "VolumeSMA"],
-            signal_generation_rules="trend_following",
+            signal_generation_rules=cast(Any, "trend_following"),
         )
         config.signal_filters = [Mock(enabled=False)]
 

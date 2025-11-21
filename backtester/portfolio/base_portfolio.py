@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Protocol
 
 import numpy as np
+from numpy.typing import NDArray
 
 from backtester.core.event_bus import EventBus
 from backtester.core.events import create_portfolio_update_event
@@ -25,7 +26,7 @@ class PortfolioPerformance(Protocol):
     winning_trades: int
     win_rate: float
     final_portfolio_value: float
-    portfolio_values: list[float] | np.ndarray
+    portfolio_values: list[float] | NDArray[np.float64]
 
 
 class BasePortfolio(ABC):

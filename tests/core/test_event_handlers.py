@@ -1,6 +1,7 @@
 """Tests for the event handlers module."""
 
 import time
+from typing import Any, cast
 from unittest.mock import Mock, patch
 
 import pytest
@@ -19,6 +20,7 @@ from backtester.core.event_handlers import (
 )
 from backtester.core.events import (
     MarketDataEvent,
+    MarketDataType,
     OrderEvent,
     OrderSide,
     OrderStatus,
@@ -116,7 +118,7 @@ class TestMarketDataHandler:
             timestamp=time.time(),
             source="market_feed",
             symbol="AAPL",
-            data_type="BAR",
+            data_type=MarketDataType.BAR,
             open_price=150.0,
             high_price=155.0,
             low_price=149.0,
@@ -146,7 +148,7 @@ class TestMarketDataHandler:
             timestamp=time.time(),
             source="market_feed",
             symbol="AAPL",
-            data_type="BAR",
+            data_type=MarketDataType.BAR,
             open_price=150.0,
             high_price=155.0,
             low_price=149.0,
@@ -164,14 +166,14 @@ class TestMarketDataHandler:
         def failing_process(event):
             raise Exception("Handler error")
 
-        self.handler._process_market_data = failing_process
+        cast(Any, self.handler)._process_market_data = failing_process
 
         event = MarketDataEvent(
             event_type="MARKET_DATA",
             timestamp=time.time(),
             source="market_feed",
             symbol="AAPL",
-            data_type="BAR",
+            data_type=MarketDataType.BAR,
             open_price=150.0,
             high_price=155.0,
             low_price=149.0,

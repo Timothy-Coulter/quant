@@ -356,8 +356,8 @@ class TestBacktesterLogger:
 
         assert handler.records, "Expected at least one log record"
         record = handler.records[-1]
-        assert record.run_id == "demo-run"
-        assert record.symbol == "MSFT"
+        assert getattr(record, "run_id", None) == "demo-run"
+        assert getattr(record, "symbol", None) == "MSFT"
 
 
 class TestLogLevel:

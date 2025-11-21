@@ -6,13 +6,13 @@ position sizing based on the Kelly formula to maximize long-term growth.
 
 import logging
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
 
 from .base_portfolio_strategy import BasePortfolioStrategy
-from .portfolio_strategy_config import PortfolioStrategyConfig
+from .portfolio_strategy_config import PortfolioStrategyConfig, SignalFilterConfig
 
 
 class KellyCriterionStrategy(BasePortfolioStrategy):
@@ -38,10 +38,10 @@ class KellyCriterionStrategy(BasePortfolioStrategy):
         # Strategy-specific parameters
         self.lookback_period = config.optimization_params.lookback_period
         self.risk_free_rate = config.optimization_params.risk_free_rate
-        risk_parameters = config.risk_parameters
+        risk_parameters_value: Any = config.risk_parameters
 
         def _risk_value(field: str, default: float) -> float:
-            source = risk_parameters
+            source = risk_parameters_value
             if source is None:
                 return default
             if isinstance(source, Mapping):
@@ -233,6 +233,7 @@ class KellyCriterionStrategy(BasePortfolioStrategy):
 
         portfolio_actions = []
 
+        filters = cast(SignalFilterConfig, self.config.signal_filters)
         for signal in signals:
             symbol = signal.get('symbol')
             if not symbol or symbol not in self.symbols:
@@ -243,7 +244,7 @@ class KellyCriterionStrategy(BasePortfolioStrategy):
             strength = signal.get('strength', 1.0)
 
             # Filter signals based on confidence
-            if confidence < self.config.signal_filters.min_confidence:
+            if confidence < filters.min_confidence:
                 continue
 
             # Calculate target position size based on Kelly weight
@@ -436,9 +437,14 @@ class KellyCriterionStrategy(BasePortfolioStrategy):
         if hasattr(self.portfolio, 'positions') and symbol in self.portfolio.positions:
             position = self.portfolio.positions[symbol]
             if isinstance(position, dict):
-                return position.get('market_value', 0.0)
-            else:
-                return getattr(position, 'quantity', 0) * getattr(position, 'current_price', 0)
+                value = position.get('market_value', 0.0)
+                try:
+                    return float(value)
+                except (TypeError, ValueError):
+                    return 0.0
+            quantity = float(getattr(position, 'quantity', 0.0) or 0.0)
+            price = float(getattr(position, 'current_price', 0.0) or 0.0)
+            return quantity * price
 
         return 0.0
 

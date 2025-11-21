@@ -4,13 +4,13 @@ This module provides functionality for creating, managing, and configuring
 Optuna studies for backtest optimization.
 """
 
+from __future__ import annotations
+
 import logging
 from datetime import datetime
 from typing import Any
 
-import optuna
-from optuna.study import Study
-
+from backtester.optmisation._optuna import require_optuna
 from backtester.optmisation.base import OptimizationMetadata
 from backtester.optmisation.parameter_space import OptimizationConfig, ParameterSpace
 
@@ -40,7 +40,7 @@ class OptunaStudyManager:
         self.logger: logging.Logger = logger or logging.getLogger(__name__)
         self.storage_url = storage_url
         self.direction = direction
-        self._study: Study | None = None
+        self._study: Any | None = None
 
         # Generate study name if not provided
         if study_name is None:
@@ -56,7 +56,7 @@ class OptunaStudyManager:
         config: OptimizationConfig | None = None,
         parameter_space: ParameterSpace | None = None,
         load_if_exists: bool = True,
-    ) -> Study:
+    ) -> Any:
         """Create a new Optuna study.
 
         Args:
@@ -81,7 +81,8 @@ class OptunaStudyManager:
 
         # Create study
         try:
-            self._study = optuna.create_study(
+            optuna_module = require_optuna()
+            self._study = optuna_module.create_study(
                 study_name=config.study_name,
                 direction=config.direction,
                 storage=config.get_storage_url(),
@@ -102,7 +103,7 @@ class OptunaStudyManager:
     def load_study(
         self,
         config: OptimizationConfig | None = None,
-    ) -> Study:
+    ) -> Any:
         """Load an existing Optuna study.
 
         Args:
@@ -120,7 +121,8 @@ class OptunaStudyManager:
         try:
             storage_url = config.get_storage_url()
             if storage_url:
-                self._study = optuna.load_study(
+                optuna_module = require_optuna()
+                self._study = optuna_module.load_study(
                     study_name=config.study_name,
                     storage=storage_url,
                 )
@@ -139,7 +141,7 @@ class OptunaStudyManager:
             self.logger.error(f"Failed to load study: {e}")
             raise
 
-    def get_study(self) -> Study:
+    def get_study(self) -> Any:
         """Get the current study instance.
 
         Returns:
@@ -166,7 +168,8 @@ class OptunaStudyManager:
 
         try:
             if self.storage_url:
-                optuna.delete_study(
+                optuna_module = require_optuna()
+                optuna_module.delete_study(
                     study_name=self.study_name,
                     storage=self.storage_url,
                 )
@@ -227,11 +230,16 @@ class OptunaStudyManager:
             return {"total_trials": 0}
 
         values = [trial.value for trial in trials if trial.value is not None]
+        optuna_module = require_optuna()
         complete_trials = [
-            trial for trial in trials if trial.state == optuna.trial.TrialState.COMPLETE
+            trial for trial in trials if trial.state == optuna_module.trial.TrialState.COMPLETE
         ]
-        pruned_trials = [trial for trial in trials if trial.state == optuna.trial.TrialState.PRUNED]
-        failed_trials = [trial for trial in trials if trial.state == optuna.trial.TrialState.FAIL]
+        pruned_trials = [
+            trial for trial in trials if trial.state == optuna_module.trial.TrialState.PRUNED
+        ]
+        failed_trials = [
+            trial for trial in trials if trial.state == optuna_module.trial.TrialState.FAIL
+        ]
 
         stats = {
             "total_trials": len(trials),
@@ -341,7 +349,7 @@ class OptunaStudyManager:
         best_value = self._study.best_value
         return float(best_value) if best_value is not None else None
 
-    def get_best_trial(self) -> optuna.trial.FrozenTrial | None:
+    def get_best_trial(self) -> Any | None:
         """Get the best trial from the study.
 
         Returns:

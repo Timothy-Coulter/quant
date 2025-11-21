@@ -6,6 +6,7 @@ that are used across all test modules.
 
 import os
 import sys
+import warnings
 from datetime import datetime
 from typing import Any
 from unittest.mock import Mock
@@ -28,6 +29,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 # Pytest configuration
+warnings.filterwarnings(
+    "ignore",
+    category=DeprecationWarning,
+    module=r"findatapy\.market\.marketdatarequest",
+)
+
+
 def pytest_configure(config: Any) -> None:
     """Configure pytest with custom markers and settings."""
     config.addinivalue_line(
@@ -35,6 +43,7 @@ def pytest_configure(config: Any) -> None:
     )
     config.addinivalue_line("markers", "integration: marks tests as integration tests")
     config.addinivalue_line("markers", "unit: marks tests as unit tests")
+    config.addinivalue_line("markers", "performance: marks tests as performance suites")
 
 
 @pytest.fixture(scope="session")

@@ -507,3 +507,6 @@ class DataRetrieval:
 def clear_data_retrieval_cache() -> None:
     """Clear the shared in-memory DataRetrieval cache (primarily for tests)."""
     _DATA_CACHE.clear()
+
+
+__all__ = ['DataRetrieval', 'DataRetrievalConfig', 'clear_data_retrieval_cache']

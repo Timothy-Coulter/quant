@@ -4,11 +4,13 @@ This module provides functionality for defining parameter search spaces,
 validation rules, and optimization configurations for Optuna studies.
 """
 
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass
 from typing import Any
 
-import optuna
+from backtester.optmisation._optuna import require_optuna
 
 
 @dataclass
@@ -49,7 +51,7 @@ class ParameterSpace:
         self.logger: logging.Logger = logger or logging.getLogger(__name__)
         self._parameters: dict[str, ParameterDefinition] = {}
 
-    def add_parameter(self, param_def: ParameterDefinition) -> 'ParameterSpace':
+    def add_parameter(self, param_def: ParameterDefinition) -> ParameterSpace:
         """Add a parameter to the search space.
 
         Args:
@@ -70,7 +72,7 @@ class ParameterSpace:
         step: float | None = None,
         log: bool = False,
         q: float | None = None,
-    ) -> 'ParameterSpace':
+    ) -> ParameterSpace:
         """Add a float parameter to the search space.
 
         Args:
@@ -101,7 +103,7 @@ class ParameterSpace:
         low: int,
         high: int,
         step: int | None = None,
-    ) -> 'ParameterSpace':
+    ) -> ParameterSpace:
         """Add an integer parameter to the search space.
 
         Args:
@@ -122,7 +124,7 @@ class ParameterSpace:
         )
         return self.add_parameter(param_def)
 
-    def add_categorical(self, name: str, choices: list[Any]) -> 'ParameterSpace':
+    def add_categorical(self, name: str, choices: list[Any]) -> ParameterSpace:
         """Add a categorical parameter to the search space.
 
         Args:
@@ -145,7 +147,7 @@ class ParameterSpace:
         low: float,
         high: float,
         q: float | None = None,
-    ) -> 'ParameterSpace':
+    ) -> ParameterSpace:
         """Add a loguniform parameter to the search space.
 
         Args:
@@ -169,7 +171,7 @@ class ParameterSpace:
         )
         return self.add_parameter(param_def)
 
-    def suggest_params(self, trial: optuna.Trial) -> dict[str, Any]:
+    def suggest_params(self, trial: Any) -> dict[str, Any]:
         """Suggest parameter values for an Optuna trial.
 
         Args:
@@ -186,9 +188,7 @@ class ParameterSpace:
 
         return params
 
-    def _suggest_param_value(
-        self, trial: optuna.Trial, param_def: ParameterDefinition
-    ) -> float | int | Any:
+    def _suggest_param_value(self, trial: Any, param_def: ParameterDefinition) -> float | int | Any:
         """Suggest a single parameter value for an Optuna trial.
 
         Args:
@@ -213,7 +213,7 @@ class ParameterSpace:
             return self._suggest_loguniform_param(trial, param_def)
         return None
 
-    def _suggest_float_param(self, trial: optuna.Trial, param_def: ParameterDefinition) -> float:
+    def _suggest_float_param(self, trial: Any, param_def: ParameterDefinition) -> float:
         """Suggest a float parameter value.
 
         Args:
@@ -252,7 +252,7 @@ class ParameterSpace:
             )
             return float(value)
 
-    def _suggest_int_param(self, trial: optuna.Trial, param_def: ParameterDefinition) -> int:
+    def _suggest_int_param(self, trial: Any, param_def: ParameterDefinition) -> int:
         """Suggest an integer parameter value.
 
         Args:
@@ -282,9 +282,7 @@ class ParameterSpace:
             )
             return int(value)
 
-    def _suggest_loguniform_param(
-        self, trial: optuna.Trial, param_def: ParameterDefinition
-    ) -> float:
+    def _suggest_loguniform_param(self, trial: Any, param_def: ParameterDefinition) -> float:
         """Suggest a loguniform parameter value.
 
         Args:
@@ -440,7 +438,7 @@ class OptimizationConfig:
         self.study_name: str | None = None
         self.load_if_exists: bool = True
 
-    def set_trials(self, n_trials: int) -> 'OptimizationConfig':
+    def set_trials(self, n_trials: int) -> OptimizationConfig:
         """Set number of trials.
 
         Args:
@@ -452,7 +450,7 @@ class OptimizationConfig:
         self.n_trials = n_trials
         return self
 
-    def set_timeout(self, timeout: int | None) -> 'OptimizationConfig':
+    def set_timeout(self, timeout: int | None) -> OptimizationConfig:
         """Set optimization timeout.
 
         Args:
@@ -464,7 +462,7 @@ class OptimizationConfig:
         self.timeout = timeout
         return self
 
-    def set_parallel_jobs(self, n_jobs: int) -> 'OptimizationConfig':
+    def set_parallel_jobs(self, n_jobs: int) -> OptimizationConfig:
         """Set number of parallel jobs.
 
         Args:
@@ -476,7 +474,7 @@ class OptimizationConfig:
         self.n_jobs = n_jobs
         return self
 
-    def set_sampler(self, sampler_name: str, **kwargs: Any) -> 'OptimizationConfig':
+    def set_sampler(self, sampler_name: str, **kwargs: Any) -> OptimizationConfig:
         """Set Optuna sampler configuration.
 
         Args:
@@ -490,7 +488,7 @@ class OptimizationConfig:
         self.sampler_kwargs = kwargs
         return self
 
-    def set_storage(self, storage_url: str | None) -> 'OptimizationConfig':
+    def set_storage(self, storage_url: str | None) -> OptimizationConfig:
         """Set storage configuration.
 
         Args:
@@ -502,7 +500,7 @@ class OptimizationConfig:
         self.storage_url = storage_url
         return self
 
-    def set_study_name(self, study_name: str) -> 'OptimizationConfig':
+    def set_study_name(self, study_name: str) -> OptimizationConfig:
         """Set study name.
 
         Args:
@@ -514,7 +512,7 @@ class OptimizationConfig:
         self.study_name = study_name
         return self
 
-    def set_direction(self, direction: str) -> 'OptimizationConfig':
+    def set_direction(self, direction: str) -> OptimizationConfig:
         """Set optimization direction.
 
         Args:
@@ -528,18 +526,19 @@ class OptimizationConfig:
         self.direction = direction
         return self
 
-    def get_sampler(self) -> optuna.samplers.BaseSampler:
+    def get_sampler(self) -> Any:
         """Get configured Optuna sampler.
 
         Returns:
             Configured sampler instance
         """
+        optuna_module = require_optuna()
         sampler_map = {
-            'tpe': optuna.samplers.TPESampler,
-            'random': optuna.samplers.RandomSampler,
-            'grid': optuna.samplers.GridSampler,
-            'cmaes': optuna.samplers.CmaEsSampler,
-            'nsgaii': optuna.samplers.NSGAIISampler,
+            'tpe': optuna_module.samplers.TPESampler,
+            'random': optuna_module.samplers.RandomSampler,
+            'grid': optuna_module.samplers.GridSampler,
+            'cmaes': optuna_module.samplers.CmaEsSampler,
+            'nsgaii': optuna_module.samplers.NSGAIISampler,
         }
 
         if self.sampler_name not in sampler_map:
@@ -552,7 +551,7 @@ class OptimizationConfig:
                 "Grid sampler requires search space - use ParameterSpace.create_grid_space()"
             )
 
-        sampler: optuna.samplers.BaseSampler = sampler_class(**self.sampler_kwargs)
+        sampler = sampler_class(**self.sampler_kwargs)
         return sampler
 
     def get_storage_url(self) -> str | None:

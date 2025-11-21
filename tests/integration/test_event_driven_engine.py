@@ -57,10 +57,10 @@ def test_backtest_engine_event_driven_flow() -> None:
     processed_signals: list[list[dict[str, Any]]] = []
     capture_processed_signals(engine, processed_signals)
 
-    engine._calculate_performance_metrics = types.MethodType(
-        lambda self: {"final_portfolio_value": stub_portfolio.total_value},
-        engine,
+    patched_metrics = types.MethodType(
+        lambda self: {"final_portfolio_value": stub_portfolio.total_value}, engine
     )
+    object.__setattr__(engine, "_calculate_performance_metrics", patched_metrics)
 
     original_create_strategy = engine.create_strategy
 
@@ -79,7 +79,8 @@ def test_backtest_engine_event_driven_flow() -> None:
         )
         return primary
 
-    engine.create_strategy = types.MethodType(dual_strategy_factory, engine)
+    patched_factory = types.MethodType(dual_strategy_factory, engine)
+    object.__setattr__(engine, "create_strategy", patched_factory)
 
     with (
         patch.object(

@@ -7,10 +7,8 @@ portfolio-level limits, position concentration limits, and dynamic risk limit ma
 import logging
 from typing import Any
 
-from backtester.risk_management.component_configs.risk_limit_config import (
-    RiskLimitConfig,
-    RiskProfile,
-)
+from backtester.risk_management.component_configs.risk_limit_config import RiskLimitConfig
+from backtester.risk_management.risk_profile import RiskProfile
 
 
 class RiskLimits:

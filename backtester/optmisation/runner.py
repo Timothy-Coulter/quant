@@ -4,14 +4,15 @@ This module provides the main optimization runner that orchestrates
 the entire optimization process using Optuna.
 """
 
+from __future__ import annotations
+
 import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-import optuna
-
+from backtester.optmisation._optuna import require_optuna
 from backtester.optmisation.base import BaseOptimization
 from backtester.optmisation.objective import OptimizationObjective
 from backtester.optmisation.parameter_space import OptimizationConfig, ParameterSpace
@@ -24,7 +25,7 @@ class OptimizationResult:
 
     best_params: dict[str, Any]
     best_value: float | None
-    best_trial: optuna.trial.FrozenTrial | None
+    best_trial: Any | None
     n_trials: int
     optimization_time: float
     study_summary: dict[str, Any]
@@ -155,7 +156,7 @@ class OptimizationRunner(BaseOptimization):
         finally:
             self.end_time = time.time()
 
-    def _create_optuna_objective(self) -> Callable[[optuna.Trial], float]:
+    def _create_optuna_objective(self) -> Callable[[Any], float]:
         """Create objective function for Optuna.
 
         Returns:
@@ -165,7 +166,7 @@ class OptimizationRunner(BaseOptimization):
         objective = self.objective
         direction = self.config.direction
 
-        def optuna_objective(trial: optuna.Trial) -> float:
+        def optuna_objective(trial: Any) -> float:
             """Objective function for Optuna trial.
 
             Args:
@@ -218,7 +219,7 @@ class OptimizationRunner(BaseOptimization):
 
     def _run_standard_optimization(
         self,
-        study: optuna.Study,
+        study: Any,
         optuna_objective: Any,
         n_trials: int,
         timeout: int | None,
@@ -251,7 +252,7 @@ class OptimizationRunner(BaseOptimization):
 
     def _run_constrained_optimization(
         self,
-        study: optuna.Study,
+        study: Any,
         optuna_objective: Any,
         n_trials: int,
         timeout: int | None,
@@ -276,7 +277,7 @@ class OptimizationRunner(BaseOptimization):
 
         if constraint_functions:
             # Create constraint function for Optuna
-            def constraints(trial: optuna.Trial) -> list[float]:
+            def constraints(trial: Any) -> list[float]:
                 params = self.parameter_space.suggest_params(trial)
                 return [func(params) for func in constraint_functions]
 
@@ -441,25 +442,26 @@ class OptimizationRunner(BaseOptimization):
             import matplotlib.pyplot as plt
 
             study = self.study_manager.get_study()
+            optuna_module = require_optuna()
             fig, axes = plt.subplots(2, 2, figsize=(15, 10))
             fig.suptitle('Optuna Optimization Results', fontsize=16)
 
             # Plot optimization history
-            optuna.visualization.matplotlib.plot_optimization_history(study, ax=axes[0, 0])
+            optuna_module.visualization.matplotlib.plot_optimization_history(study, ax=axes[0, 0])
             axes[0, 0].set_title('Optimization History')
 
             # Plot parameter importance
-            optuna.visualization.matplotlib.plot_param_importances(study, ax=axes[0, 1])
+            optuna_module.visualization.matplotlib.plot_param_importances(study, ax=axes[0, 1])
             axes[0, 1].set_title('Parameter Importance')
 
             # Plot parallel coordinates
-            optuna.visualization.matplotlib.plot_parallel_coordinate(study, ax=axes[1, 0])
+            optuna_module.visualization.matplotlib.plot_parallel_coordinate(study, ax=axes[1, 0])
             axes[1, 0].set_title('Parameter Relationships')
 
             # Plot contour
             if len(study.best_params) >= 2:
                 param_names = list(study.best_params.keys())[:2]
-                optuna.visualization.matplotlib.plot_contour(
+                optuna_module.visualization.matplotlib.plot_contour(
                     study, params=param_names, ax=axes[1, 1]
                 )
                 axes[1, 1].set_title(f'Contour: {param_names[0]} vs {param_names[1]}')

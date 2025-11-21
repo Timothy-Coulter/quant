@@ -36,10 +36,10 @@ def test_kelly_strategy_propagates_weights_through_engine() -> None:
     engine = BacktestEngine(config=config)
     engine.current_data = _sample_market_data(rows=30)
 
-    engine._calculate_performance_metrics = types.MethodType(
-        lambda self: {"final_portfolio_value": self.current_portfolio.total_value},
-        engine,
+    patched_metrics = types.MethodType(
+        lambda self: {"final_portfolio_value": self.current_portfolio.total_value}, engine
     )
+    object.__setattr__(engine, "_calculate_performance_metrics", patched_metrics)
 
     def constant_weights(
         self: KellyCriterionStrategy, market_data: dict[str, Any]

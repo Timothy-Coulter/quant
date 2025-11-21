@@ -843,15 +843,12 @@ class BacktestEngine:
             )
 
         assert self.current_portfolio is not None
-        portfolio_update = cast(
-            dict[str, Any],
-            self.current_portfolio.process_tick(
-                timestamp=timestamp,
-                market_data=market_data if market_data else None,
-                current_price=current_price,
-                day_high=day_high,
-                day_low=day_low,
-            ),
+        portfolio_update: dict[str, Any] = self.current_portfolio.process_tick(
+            timestamp=timestamp,
+            market_data=market_data if market_data else None,
+            current_price=current_price,
+            day_high=day_high,
+            day_low=day_low,
         )
         portfolio_update['executed_orders'] = executed_orders
         return portfolio_update
@@ -1168,9 +1165,8 @@ class BacktestEngine:
                 'symbol': symbol,
             }
 
-        risk_signal = cast(
-            dict[str, Any],
-            self.current_risk_manager.check_portfolio_risk(portfolio_value, positions_dict),
+        risk_signal: dict[str, Any] = self.current_risk_manager.check_portfolio_risk(
+            portfolio_value, positions_dict
         )
         risk_signal['stage'] = stage
         risk_signal['timestamp'] = timestamp

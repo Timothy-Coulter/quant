@@ -1,5 +1,7 @@
 """Tests for signal strategy configuration models."""
 
+from typing import Any, cast
+
 import pytest
 from pydantic import ValidationError
 
@@ -115,7 +117,7 @@ class TestSignalStrategyConfig:
         with pytest.raises(ValidationError) as exc_info:
             SignalStrategyConfig(
                 name="test_strategy",
-                strategy_type="invalid_type",  # Invalid strategy type
+                strategy_type=cast(Any, "invalid_type"),  # Invalid strategy type
                 symbols=["AAPL"],
                 indicators=make_ta_strategy_config(["AAPL"]).indicators,
                 signal_filters=[],

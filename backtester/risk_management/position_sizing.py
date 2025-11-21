@@ -32,30 +32,46 @@ class PositionSizer:
 
     def calculate_position_size(
         self,
-        portfolio_value: float,
+        portfolio_value: float | None = None,
         volatility: float = 0.0,
         conviction: float = 1.0,
         account_value: float | None = None,
         entry_price: float = 100.0,
+        symbol: str | None = None,
+        side: str | None = None,
     ) -> float:
         """Calculate position size based on configured sizing method.
 
         Args:
-            portfolio_value: Current portfolio value
+            portfolio_value: Current portfolio value (defaults to account value)
             volatility: Current market volatility
             conviction: Signal conviction factor (0.0 to 2.0)
             account_value: Total account value (defaults to portfolio_value)
             entry_price: Entry price of the position
+            symbol: Optional symbol identifier for logging/compatibility
+            side: Optional trade direction (e.g. BUY/SELL)
 
         Returns:
             Position size as fraction of portfolio
         """
+        # Currently symbol and side are informational only but are accepted to maintain
+        # interface compatibility with strategy components that pass them through.
+        _ = symbol, side
+
+        effective_portfolio_value = (
+            portfolio_value if portfolio_value is not None else account_value
+        )
+
         # Handle zero or very small portfolio value
-        if portfolio_value <= 0 or (account_value is not None and account_value <= 0):
+        if (
+            effective_portfolio_value is None
+            or effective_portfolio_value <= 0
+            or (account_value is not None and account_value <= 0)
+        ):
             return 0.0
 
         if account_value is None:
-            account_value = portfolio_value
+            account_value = effective_portfolio_value
 
         # Get base position size
         position_size = self._get_base_position_size()

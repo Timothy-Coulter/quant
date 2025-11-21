@@ -21,7 +21,13 @@ class MeanReversionStrategy(BaseSignalStrategy):
     ) -> None:
         """Prepare configuration parameters and delegate to the base strategy."""
         if isinstance(config, SignalStrategyConfig):
-            inner_config = config.strategy_config  # type: ignore[assignment]
+            strategy_config = config.strategy_config
+            if not isinstance(strategy_config, MeanReversionStrategyConfig):
+                raise TypeError(
+                    "SignalStrategyConfig passed to MeanReversionStrategy must wrap "
+                    "MeanReversionStrategyConfig."
+                )
+            inner_config = strategy_config
             outer_config: SignalStrategyConfig | None = config
         else:
             inner_config = config
@@ -29,11 +35,11 @@ class MeanReversionStrategy(BaseSignalStrategy):
 
         super().__init__(inner_config, event_bus)
         self.config = outer_config or inner_config
-        self.strategy_config = inner_config
+        self.strategy_config: MeanReversionStrategyConfig = inner_config
         self.name = inner_config.name
 
-        self.mean_periods = sorted(list(inner_config.mean_periods))
-        self.std_dev_periods = sorted(list(inner_config.std_dev_periods))
+        self.mean_periods: list[int] = sorted(list(inner_config.mean_periods))
+        self.std_dev_periods: list[int] = sorted(list(inner_config.std_dev_periods))
         self.min_reversion_strength = inner_config.min_reversion_strength
         self.hurst_threshold = inner_config.hurst_threshold
         self.volatility_adjustment = inner_config.volatility_adjustment

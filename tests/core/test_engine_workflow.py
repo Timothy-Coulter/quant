@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import types
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -36,7 +36,7 @@ def test_engine_emits_ordered_events(asset_count: int) -> None:
     """Ensure the canonical market→signal→order→portfolio flow fires in sequence."""
     config = BacktesterConfig()
     engine = BacktestEngine(config=config)
-    engine._initialize_portfolio_strategy = types.MethodType(
+    cast(Any, engine)._initialize_portfolio_strategy = types.MethodType(
         lambda self, symbols, params: None,
         engine,
     )
@@ -45,7 +45,7 @@ def test_engine_emits_ordered_events(asset_count: int) -> None:
     if engine.config.data is not None:
         tickers = [f"ASSET{i}" for i in range(asset_count)]
         engine.config.data.tickers = tickers or ["ASSET0"]
-    engine.data_handler.get_data = MagicMock(return_value=market_data)
+    cast(Any, engine.data_handler).get_data = MagicMock(return_value=market_data)
 
     emitted_events: list[str] = []
     engine.event_bus.subscribe(

@@ -378,3 +378,8 @@ class OrderManager:
         self.order_history.clear()
         self.next_order_id = 1
         self.logger.info("Order manager reset")
+
+
+Order = OrderData
+
+__all__ = ['Order', 'OrderData', 'OrderType', 'OrderSide', 'OrderStatus', 'OrderManager']

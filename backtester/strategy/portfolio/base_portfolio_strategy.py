@@ -16,7 +16,11 @@ from backtester.core.interfaces import RiskManagerProtocol
 from backtester.portfolio.base_portfolio import BasePortfolio
 from backtester.risk_management.position_sizing import PositionSizer
 
-from .portfolio_strategy_config import PortfolioStrategyConfig, RebalanceFrequency
+from .portfolio_strategy_config import (
+    PortfolioConstraints,
+    PortfolioStrategyConfig,
+    RebalanceFrequency,
+)
 
 
 class BasePortfolioStrategy(ABC):
@@ -181,9 +185,14 @@ class BasePortfolioStrategy(ABC):
         if hasattr(self.portfolio, 'positions') and symbol in self.portfolio.positions:
             position = self.portfolio.positions[symbol]
             if isinstance(position, dict):
-                return position.get('market_value', 0.0)
-            else:
-                return getattr(position, 'quantity', 0) * getattr(position, 'current_price', 0)
+                value = position.get('market_value', 0.0)
+                try:
+                    return float(value)
+                except (TypeError, ValueError):
+                    return 0.0
+            quantity = float(getattr(position, 'quantity', 0.0) or 0.0)
+            price = float(getattr(position, 'current_price', 0.0) or 0.0)
+            return quantity * price
 
         return 0.0
 
@@ -590,14 +599,17 @@ class BasePortfolioStrategy(ABC):
                 self.logger.error("Symbols must be a non-empty list")
                 return False
 
-            # Validate constraints
-            if self.config.constraints is None:
-                self.logger.error("Constraints cannot be None")
+            constraints = getattr(self.config, 'constraints', None)
+            if constraints is None:
+                self.logger.error("Portfolio constraints configuration is required")
                 return False
-            if not hasattr(self.config.constraints, '__dict__') and not isinstance(
-                self.config.constraints, dict
-            ):
-                self.logger.error("Constraints must be a dictionary or object with attributes")
+            if not isinstance(constraints, PortfolioConstraints):
+                self.logger.error("Constraints must be a PortfolioConstraints instance")
+                return False
+
+            config_validator = getattr(self.config, 'validate_config', None)
+            if callable(config_validator) and not config_validator():
+                self.logger.error("PortfolioStrategyConfig validation failed")
                 return False
 
             return True
@@ -622,6 +634,8 @@ class BasePortfolioStrategy(ABC):
 
     def __repr__(self) -> str:
         """Return string representation of the strategy."""
+        strategy_type = getattr(self.type, 'value', self.type)
         return (
-            f"BasePortfolioStrategy(name='{self.name}', type='{self.type}', symbols={self.symbols})"
+            "BasePortfolioStrategy("
+            f"name='{self.name}', type='{strategy_type}', symbols={self.symbols})"
         )

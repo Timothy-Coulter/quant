@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Mapping, MutableMapping, Sequence
+from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 
-from backtester.core.event_bus import EventBus, EventFilter, EventPriority
+from backtester.core.event_bus import Event, EventBus, EventFilter, EventPriority
 from backtester.core.events import (
     MarketDataEvent,
     SignalEvent,
@@ -98,8 +98,12 @@ class BaseStrategyOrchestrator(ABC):
         self._last_result: OrchestratorCycleResult | None = None
 
         # Listen for externally generated signal events in case other components publish them.
+        def _signal_handler(event: Event) -> None:
+            if isinstance(event, SignalEvent):
+                self._record_external_signal(event)
+
         self._signal_subscription_id = self.event_bus.subscribe(
-            self._record_external_signal,
+            _signal_handler,
             EventFilter(event_types={"SIGNAL"}),
         )
 
@@ -224,21 +228,21 @@ class BaseStrategyOrchestrator(ABC):
 
         strategy = self.config.conflict_resolution
 
-        if strategy == ConflictResolutionStrategy.FIRST_SIGNAL:
+        def _first_signal() -> list[StrategySignal]:
             ordered = sorted(signals, key=lambda s: (s.priority, -s.confidence), reverse=False)
             return [ordered[0]]
 
-        if strategy == ConflictResolutionStrategy.HIGHEST_CONFIDENCE:
+        def _highest_confidence() -> list[StrategySignal]:
             return [max(signals, key=lambda s: (s.confidence, s.weight, -s.priority))]
 
-        if strategy == ConflictResolutionStrategy.LATEST:
+        def _latest_signal() -> list[StrategySignal]:
             return [signals[-1]]
 
-        if strategy == ConflictResolutionStrategy.WEIGHTED_MERGE:
+        def _weighted_merge() -> list[StrategySignal]:
             merged = self._merge_weighted_signals(signals)
             return [merged] if merged is not None else []
 
-        if strategy == ConflictResolutionStrategy.CONSENSUS:
+        def _consensus() -> list[StrategySignal]:
             consensus_type = self._find_consensus_signal_type(signals)
             if consensus_type is None:
                 return []
@@ -250,8 +254,18 @@ class BaseStrategyOrchestrator(ABC):
                 )
             ]
 
-        # Fallback: return signals as-is preserving original order.
-        return signals
+        handler_map: dict[ConflictResolutionStrategy, Callable[[], list[StrategySignal]]] = {
+            ConflictResolutionStrategy.FIRST_SIGNAL: _first_signal,
+            ConflictResolutionStrategy.HIGHEST_CONFIDENCE: _highest_confidence,
+            ConflictResolutionStrategy.LATEST: _latest_signal,
+            ConflictResolutionStrategy.WEIGHTED_MERGE: _weighted_merge,
+            ConflictResolutionStrategy.CONSENSUS: _consensus,
+        }
+
+        handler = handler_map.get(strategy)
+        if handler is None:
+            return signals
+        return handler()
 
     def _merge_weighted_signals(self, signals: Sequence[StrategySignal]) -> StrategySignal | None:
         """Combine signals into a single weighted representative signal."""
@@ -384,23 +398,25 @@ class BaseStrategyOrchestrator(ABC):
         """Invoke a strategy safely, normalising its output into StrategySignal instances."""
         strategy = registration.strategy
         generator = getattr(strategy, "generate_signals", None)
-        if generator is None:
+        if not callable(generator):
             raise AttributeError(
                 f"Strategy {registration.identifier} lacks generate_signals method."
             )
 
+        generator_callable = cast(
+            Callable[..., Sequence[Mapping[str, Any]] | list[dict[str, Any]] | None],
+            generator,
+        )
         try:
-            raw_signals = generator(data, symbol)  # type: ignore[misc]
+            raw_signals_obj = generator_callable(data, symbol)
         except TypeError:
-            raw_signals = generator(data)  # type: ignore[misc]
+            raw_signals_obj = generator_callable(data)
 
-        if raw_signals is None:
+        if raw_signals_obj is None:
             return []
 
         signals: list[StrategySignal] = []
-        for payload in raw_signals:
-            if not isinstance(payload, Mapping):
-                continue
+        for payload in list(raw_signals_obj):
             payload_dict = dict(payload)
             metadata = payload_dict.get("metadata", {})
             if "confidence" not in payload_dict:

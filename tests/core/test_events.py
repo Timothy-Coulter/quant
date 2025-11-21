@@ -1,13 +1,14 @@
 """Tests for the events module."""
 
 import time
+from typing import cast
 
 import pytest
 
+from backtester.core.event_bus import EventPriority
 from backtester.core.events import (
     BacktestEvent,
     DataUpdateEvent,
-    EventPriority,
     MarketDataEvent,
     MarketDataType,
     OrderEvent,
@@ -174,7 +175,7 @@ class TestSignalEvent:
                 timestamp=time.time(),
                 source="strategy",
                 symbol="AAPL",
-                signal_type="INVALID",
+                signal_type=cast(SignalType, "INVALID"),
             )
 
         # Test invalid strength
@@ -285,7 +286,7 @@ class TestOrderEvent:
                 source="strategy",
                 symbol="AAPL",
                 order_id="order_123",
-                side="INVALID",
+                side=cast(OrderSide, "INVALID"),
                 order_type=OrderType.MARKET,
                 quantity=100.0,
             )
@@ -501,7 +502,7 @@ class TestRiskAlertEvent:
                 timestamp=time.time(),
                 source="risk_manager",
                 alert_id="alert_123",
-                risk_level="INVALID",
+                risk_level=cast(RiskLevel, "INVALID"),
                 message="Test message",
                 component="test_component",
             )
@@ -591,7 +592,7 @@ class TestStrategyEvent:
                 timestamp=time.time(),
                 source="strategy",
                 strategy_id="strategy_123",
-                event_type_enum="INVALID",  # String instead of enum
+                event_type_enum=cast(StrategyEventType, "INVALID"),
                 strategy_name="MovingAverageStrategy",
             )
 
@@ -831,7 +832,7 @@ class TestEventFactoryFunctions:
         """Test signal event factory function."""
         event = create_signal_event(
             symbol="AAPL",
-            signal_type="SELL",
+            signal_type=SignalType.SELL,
             strength=0.7,
             confidence=0.8,
             source="test_strategy",
@@ -850,8 +851,8 @@ class TestEventFactoryFunctions:
         """Test order event factory function."""
         event = create_order_event(
             symbol="AAPL",
-            side="BUY",
-            order_type="LIMIT",
+            side=OrderSide.BUY,
+            order_type=OrderType.LIMIT,
             quantity=100.0,
             source="test_strategy",
             priority=EventPriority.HIGH,

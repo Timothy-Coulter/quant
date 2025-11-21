@@ -47,10 +47,10 @@ def test_run_halts_orders_and_emits_alert_on_risk_breach() -> None:
     )
     stub_risk.allow_new_positions = False
     stub_risk.persist_after_trigger = True
-    engine._calculate_performance_metrics = types.MethodType(
-        lambda self: {"final_portfolio_value": stub_portfolio.total_value},
-        engine,
+    patched_metrics = types.MethodType(
+        lambda self: {"final_portfolio_value": stub_portfolio.total_value}, engine
     )
+    object.__setattr__(engine, "_calculate_performance_metrics", patched_metrics)
 
     with patch.object(
         MomentumStrategy,

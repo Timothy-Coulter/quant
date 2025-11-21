@@ -201,8 +201,8 @@ class BacktesterLogger:
     def __init__(
         self,
         name: str = "backtester",
-        level: str = "INFO",
-        format: str = "STANDARD",
+        level: LogLevel | str = LogLevel.INFO,
+        format: LogFormat | str = LogFormat.STANDARD,
         log_file: str | None = None,
     ) -> None:
         """Initialize the backtester logger.
@@ -214,22 +214,44 @@ class BacktesterLogger:
             log_file: Optional log file path
         """
         self.name = name
-        self.level = str(level)
-        self.format = str(format)
+        self.level = self._coerce_log_level(level)
+        self.format = self._coerce_log_format(format)
         self.log_file = log_file
         self._logger: logging.Logger | None = None
 
-    def set_level(self, level: LogLevel) -> None:
-        """Set the log level."""
-        if not isinstance(level, LogLevel):
-            raise ValueError("Invalid log level")
-        self.level = level
-        if self._logger:
-            self._logger.setLevel(getattr(logging, level.value))
+    @staticmethod
+    def _coerce_log_level(level: LogLevel | str) -> LogLevel:
+        """Convert incoming level to a LogLevel enum."""
+        if isinstance(level, LogLevel):
+            return level
+        if isinstance(level, str):
+            try:
+                return LogLevel(level.upper())
+            except ValueError as exc:  # pragma: no cover - defensive guard
+                raise ValueError(f"Invalid log level: {level}") from exc
+        raise ValueError(f"Unsupported log level type: {type(level)!r}")
 
-    def set_format(self, format: LogFormat) -> None:
+    @staticmethod
+    def _coerce_log_format(format: LogFormat | str) -> LogFormat:
+        """Convert incoming format to a LogFormat enum."""
+        if isinstance(format, LogFormat):
+            return format
+        if isinstance(format, str):
+            try:
+                return LogFormat(format.upper())
+            except ValueError as exc:  # pragma: no cover - defensive guard
+                raise ValueError(f"Invalid log format: {format}") from exc
+        raise ValueError(f"Unsupported log format type: {type(format)!r}")
+
+    def set_level(self, level: LogLevel | str) -> None:
+        """Set the log level."""
+        self.level = self._coerce_log_level(level)
+        if self._logger:
+            self._logger.setLevel(getattr(logging, self.level.value))
+
+    def set_format(self, format: LogFormat | str) -> None:
         """Set the log format."""
-        self.format = format
+        self.format = self._coerce_log_format(format)
 
     @classmethod
     def get_logger(
@@ -297,7 +319,7 @@ class BacktesterLogger:
 
     def _create_logger_instance(self) -> logging.Logger:
         """Create a new logger instance (for test compatibility)."""
-        return BacktesterLogger.get_logger(self.name)
+        return BacktesterLogger.get_logger(self.name, level=self.level.value)
 
     def info(self, message: str, extra_data: dict[str, Any] | None = None) -> None:
         """Log info message."""

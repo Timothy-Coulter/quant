@@ -7,25 +7,46 @@ and various signal generation approaches.
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
-from backtester.core.event_bus import EventBus, EventFilter
+from backtester.core.event_bus import Event, EventBus, EventFilter
 from backtester.core.events import MarketDataEvent, create_signal_event
 from backtester.core.logger import get_backtester_logger
 from backtester.indicators.base_indicator import BaseIndicator, IndicatorFactory
 from backtester.indicators.config_loader import IndicatorConfigResolver
-from backtester.model.base_model import BaseModel
 from backtester.model.model_configs import ModelConfig
-from backtester.signal.signal_types import SignalGenerator
+from backtester.signal.signal_types import SignalGenerator, SignalType
 
-from .signal_strategy_config import SignalStrategyConfig
+from .signal_strategy_config import (
+    ArbitrageStrategyConfig,
+    CustomStrategyConfig,
+    MeanReversionStrategyConfig,
+    MLModelStrategyConfig,
+    MomentumStrategyConfig,
+    SignalStrategyConfig,
+    TechnicalAnalysisStrategyConfig,
+)
+
+SignalStrategyConfigLike = (
+    SignalStrategyConfig
+    | TechnicalAnalysisStrategyConfig
+    | MLModelStrategyConfig
+    | MomentumStrategyConfig
+    | MeanReversionStrategyConfig
+    | ArbitrageStrategyConfig
+    | CustomStrategyConfig
+)
 
 
 class StrategyTypeLabel(str):
     """Case-insensitive string wrapper for strategy type labels."""
+
+    __slots__ = ("_original",)
+    _original: str
 
     def __new__(cls, value: str) -> 'StrategyTypeLabel':
         """Create a normalized label while preserving the original casing."""
@@ -57,14 +78,14 @@ class BaseSignalStrategy(ABC):
     architecture with proper typing, logging, and validation integration.
     """
 
-    def __init__(self, config: SignalStrategyConfig, event_bus: EventBus) -> None:
+    def __init__(self, config: SignalStrategyConfigLike, event_bus: EventBus) -> None:
         """Initialize the signal strategy.
 
         Args:
             config: Signal strategy configuration parameters
             event_bus: Event bus for event-driven communication
         """
-        self.config = config
+        self.config: SignalStrategyConfigLike = config
         self.event_bus = event_bus
         self.logger = get_backtester_logger(__name__)
 
@@ -76,8 +97,9 @@ class BaseSignalStrategy(ABC):
         self.signals: list[dict[str, Any]] = []
         self.signal_history: list[dict[str, Any]] = []  # For backward compatibility
         self.indicators: dict[str, BaseIndicator] = {}
-        self.models: dict[str, BaseModel] = {}
+        self.models: dict[str, Any] = {}
         self._market_data_subscription_id: str | None = None
+        self._market_data_handler: Callable[[Event], None] | None = None
 
         # Performance tracking
         self.signal_count = 0
@@ -110,9 +132,9 @@ class BaseSignalStrategy(ABC):
             metadata_filters=metadata_filters,
         )
 
-        self._market_data_subscription_id = self.event_bus.subscribe(
-            self._handle_market_data_event, market_data_filter
-        )
+        handler = self._handle_market_data_event
+        self._market_data_handler = handler
+        self._market_data_subscription_id = self.event_bus.subscribe(handler, market_data_filter)
         self.logger.debug(
             "Subscribed to market data events with ID: %s", self._market_data_subscription_id
         )
@@ -141,29 +163,35 @@ class BaseSignalStrategy(ABC):
         if hasattr(self.config, 'models'):
             for model_config in self.config.models:
                 try:
-                    if hasattr(model_config, 'model_name'):
+                    if isinstance(model_config, ModelConfig):
                         model_name = model_config.model_name
-                        config = model_config
-                    else:
-                        model_name = model_config.get('model_name')
-                        if not model_name:
+                        resolved_config = model_config
+                    elif isinstance(model_config, dict):
+                        model_name_value = model_config.get('model_name')
+                        if not isinstance(model_name_value, str) or not model_name_value:
                             self.logger.warning("Skipping model with no name")
                             continue
-                        config = ModelConfig(**model_config)
+                        model_name = model_name_value
+                        resolved_config = ModelConfig(**model_config)
+                    else:
+                        self.logger.warning("Skipping unsupported model config type")
+                        continue
 
-                    self.models[model_name] = config
+                    self.models[model_name] = resolved_config
                     self.logger.debug(f"Initialized model: {model_name}")
 
                 except Exception as e:
                     fallback_name = getattr(model_config, 'model_name', 'unknown')
                     self.logger.error(f"Failed to initialize model {fallback_name}: {e}")
 
-    def _handle_market_data_event(self, event: MarketDataEvent) -> None:
+    def _handle_market_data_event(self, event: Event) -> None:
         """Handle incoming market data events.
 
         Args:
             event: Market data event containing price and volume information
         """
+        if not isinstance(event, MarketDataEvent):
+            return
         try:
             # Extract market data
             symbol = event.symbol
@@ -552,12 +580,7 @@ class BaseSignalStrategy(ABC):
         Returns:
             Dictionary with strategy information
         """
-        if hasattr(self.type, 'value'):
-            type_raw = str(self.type.value)
-        elif isinstance(self.type, str):
-            type_raw = self.type
-        else:
-            type_raw = str(self.type)
+        type_raw = str(getattr(self.type, 'value', self.type))
         type_value = StrategyTypeLabel(type_raw)
         indicators_list = [
             name
@@ -600,7 +623,7 @@ class BaseSignalStrategy(ABC):
 
     def _create_standard_signal(
         self,
-        signal_type: str,
+        signal_type: SignalType | str,
         confidence: float,
         action: str,
         symbol: str,
@@ -629,8 +652,17 @@ class BaseSignalStrategy(ABC):
             **metadata,
         }
 
+        try:
+            signal_enum = (
+                signal_type
+                if isinstance(signal_type, SignalType)
+                else SignalType(str(signal_type).upper())
+            )
+        except ValueError as exc:
+            raise ValueError(f"Unsupported signal type: {signal_type}") from exc
+
         return SignalGenerator.create_signal(
-            signal_type=signal_type,
+            signal_type=signal_enum,
             action=action,
             confidence=confidence,
             timestamp=timestamp,

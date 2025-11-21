@@ -16,7 +16,7 @@ from .signal_strategy_config import TechnicalAnalysisStrategyConfig
 _ORIGINAL_SERIES_INIT = pd.Series.__init__
 
 
-def _patched_series_init(self, *args: Any, **kwargs: Any) -> None:
+def _patched_series_init(self: pd.Series, *args: Any, **kwargs: Any) -> None:
     """Patch pandas.Series.__init__ to pad/truncate short data vectors."""
     try:
         _ORIGINAL_SERIES_INIT(self, *args, **kwargs)
@@ -52,7 +52,7 @@ def _patched_series_init(self, *args: Any, **kwargs: Any) -> None:
         _ORIGINAL_SERIES_INIT(self, *new_args, **kwargs)
 
 
-pd.Series.__init__ = _patched_series_init  # type: ignore[assignment]
+pd.Series.__init__ = _patched_series_init
 
 
 class TechnicalAnalysisStrategy(BaseSignalStrategy):

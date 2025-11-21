@@ -1,6 +1,7 @@
 """Tests for the event bus system."""
 
 import time
+from typing import Any, cast
 from unittest.mock import patch
 
 import pytest
@@ -224,7 +225,7 @@ class TestEventBus:
     def test_subscribe_invalid_handler(self):
         """Test subscribing with invalid handler."""
         with pytest.raises(ValueError, match="Handler must be callable"):
-            self.event_bus.subscribe("not_a_function")
+            self.event_bus.subscribe(cast(Any, "not_a_function"))
 
     def test_unsubscribe(self):
         """Test unsubscribing."""
@@ -284,7 +285,7 @@ class TestEventBus:
     def test_publish_invalid_event(self):
         """Test publishing invalid event."""
         with pytest.raises(ValueError, match="Event must be an instance of Event class"):
-            self.event_bus.publish("not_an_event")
+            self.event_bus.publish(cast(Any, "not_an_event"))
 
     def test_publish_immediate(self):
         """Test publishing immediate event."""
@@ -352,7 +353,7 @@ class TestEventBus:
     def test_register_handler_invalid(self):
         """Test registering invalid handler."""
         with pytest.raises(ValueError, match="Handler must be callable"):
-            self.event_bus.register_handler("TEST_EVENT", "not_a_function")
+            self.event_bus.register_handler("TEST_EVENT", cast(Any, "not_a_function"))
 
     def test_deregister_handler(self):
         """Test deregistering handler."""

@@ -7,7 +7,7 @@ providing type safety, validation, and serialization capabilities.
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 # Import the correct IndicatorConfig from the existing indicators module
 from backtester.indicators.indicator_configs import IndicatorConfig
@@ -571,6 +571,8 @@ class MeanReversionStrategyConfig(BaseModel):
 class ArbitrageStrategyConfig(BaseModel):
     """Configuration for arbitrage strategy."""
 
+    name: str = Field(default="arbitrage_strategy", description="Strategy name")
+    strategy_name: str = Field(default="arbitrage_strategy", description="Strategy identifier")
     strategy_type: SignalStrategyType = Field(
         SignalStrategyType.ARBITRAGE, description="Strategy type"
     )
@@ -603,6 +605,8 @@ class ArbitrageStrategyConfig(BaseModel):
 class CustomStrategyConfig(BaseModel):
     """Configuration for custom strategies."""
 
+    name: str = Field(default="custom_strategy", description="Strategy name")
+    strategy_name: str = Field(default="custom_strategy", description="Strategy identifier")
     strategy_type: SignalStrategyType = Field(
         SignalStrategyType.CUSTOM, description="Strategy type"
     )
@@ -626,6 +630,18 @@ class CustomStrategyConfig(BaseModel):
     custom_parameters: dict[str, Any] = Field(
         default_factory=dict, description="Custom strategy parameters"
     )
+    strategy_parameters: dict[str, Any] = Field(
+        default_factory=dict, description="Additional strategy parameters"
+    )
+
+    @model_validator(mode='after')
+    def _synchronize_parameters(self) -> 'CustomStrategyConfig':
+        """Keep legacy custom_parameters and strategy_parameters aligned."""
+        if self.strategy_parameters and not self.custom_parameters:
+            self.custom_parameters = dict(self.strategy_parameters)
+        elif self.custom_parameters and not self.strategy_parameters:
+            self.strategy_parameters = dict(self.custom_parameters)
+        return self
 
     @field_validator('custom_module')
     @classmethod
@@ -661,6 +677,7 @@ class SignalStrategyConfig(BaseModel):
     signal_filters: list[SignalFilterConfig] = Field(
         default_factory=list, description="Signal filters"
     )
+    models: list[ModelConfig] = Field(default_factory=list, description="Model configurations")
     risk_parameters: RiskParameters = Field(
         default_factory=RiskParameters, description="Risk parameters"
     )
@@ -700,9 +717,15 @@ class SignalStrategyConfig(BaseModel):
     @classmethod
     def validate_strategy_type(cls, v):
         """Validate strategy type."""
-        if not isinstance(v, SignalStrategyType):
-            raise ValueError("Strategy type must be a valid SignalStrategyType")
-        return v
+        if isinstance(v, SignalStrategyType):
+            return v
+        if isinstance(v, str):
+            try:
+                normalized = v.strip()
+                return SignalStrategyType(normalized)
+            except ValueError as exc:
+                raise ValueError("Strategy type must be a valid SignalStrategyType") from exc
+        raise ValueError("Strategy type must be a valid SignalStrategyType")
 
     @field_validator('symbols')
     @classmethod
@@ -775,15 +798,17 @@ class SignalStrategyConfig(BaseModel):
     @property
     def strategy_name(self) -> str:
         """Expose the underlying strategy configuration name."""
-        if hasattr(self.strategy_config, 'strategy_name'):
-            return self.strategy_config.strategy_name  # type: ignore[return-value]
+        name_attr = getattr(self.strategy_config, 'strategy_name', None)
+        if isinstance(name_attr, str) and name_attr:
+            return name_attr
         return self.name
 
     @property
     def strategy_parameters(self) -> dict[str, Any]:
         """Delegate strategy parameters to the underlying configuration."""
-        if hasattr(self.strategy_config, 'strategy_parameters'):
-            return self.strategy_config.strategy_parameters  # type: ignore[return-value]
+        params = getattr(self.strategy_config, 'strategy_parameters', None)
+        if isinstance(params, dict):
+            return params
         return self.parameters
 
     def get_strategy_parameters(self) -> dict[str, Any]:
@@ -792,7 +817,7 @@ class SignalStrategyConfig(BaseModel):
         Returns:
             Dictionary of strategy parameters
         """
-        return self.strategy_config.strategy_parameters
+        return self.strategy_parameters
 
     def get_indicators_config(self) -> list[IndicatorConfig]:
         """Get indicators configuration.
@@ -877,8 +902,9 @@ class SignalStrategyConfig(BaseModel):
 
         # Add columns required by indicators
         for indicator in self.get_indicators_config():
-            if indicator.source_column not in required_columns:
-                required_columns.append(indicator.source_column)
+            source_column = getattr(indicator, 'source_column', indicator.price_column)
+            if source_column not in required_columns:
+                required_columns.append(source_column)
 
         return required_columns
 
@@ -906,3 +932,19 @@ class SignalStrategyConfig(BaseModel):
 # Type aliases for convenience
 SignalStrategyConfigDict = dict[str, Any]
 SignalStrategyConfigList = list[SignalStrategyConfig]
+
+__all__ = [
+    'SignalStrategyType',
+    'ModelConfig',
+    'SignalFilterConfig',
+    'RiskParameters',
+    'ExecutionParameters',
+    'TechnicalAnalysisStrategyConfig',
+    'MLModelStrategyConfig',
+    'MomentumStrategyConfig',
+    'MeanReversionStrategyConfig',
+    'ArbitrageStrategyConfig',
+    'CustomStrategyConfig',
+    'SignalStrategyConfig',
+    'IndicatorConfig',
+]

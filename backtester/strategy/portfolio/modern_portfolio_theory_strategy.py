@@ -7,14 +7,15 @@ Sharpe ratio or minimize portfolio risk.
 
 import logging
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 from scipy.optimize import minimize
 
 from .base_portfolio_strategy import BasePortfolioStrategy
-from .portfolio_strategy_config import PortfolioStrategyConfig
+from .portfolio_strategy_config import PortfolioStrategyConfig, SignalFilterConfig
 
 
 class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
@@ -49,7 +50,7 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
 
         # MPT calculation parameters
         self.expected_returns: dict[str, list[float]] = {symbol: [] for symbol in self.symbols}
-        self.covariance_matrices: list[np.ndarray] = []
+        self.covariance_matrices: list[npt.NDArray[np.float_]] = []
         self.portfolio_returns: list[float] = []
         self.portfolio_risks: list[float] = []
         self.sharpe_ratios: list[float] = []
@@ -102,7 +103,7 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
         return price_data
 
     def _update_tracking_metrics(
-        self, expected_returns: dict[str, float], cov_matrix: np.ndarray
+        self, expected_returns: dict[str, float], cov_matrix: npt.NDArray[np.float_]
     ) -> None:
         """Track rolling statistics for diagnostics."""
         for symbol, ret in expected_returns.items():
@@ -115,7 +116,7 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
             self.covariance_matrices = self.covariance_matrices[-50:]
 
     def _compute_optimal_weights(
-        self, expected_returns: dict[str, float], cov_matrix: np.ndarray
+        self, expected_returns: dict[str, float], cov_matrix: npt.NDArray[np.float_]
     ) -> dict[str, float]:
         """Select and execute the configured optimizer."""
         optimizer_map: dict[str, Callable[[], dict[str, float]]] = {
@@ -183,7 +184,7 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
 
     def _calculate_mpt_parameters(
         self, price_data: dict[str, pd.DataFrame]
-    ) -> tuple[dict[str, float], np.ndarray]:
+    ) -> tuple[dict[str, float], npt.NDArray[np.float_]]:
         """Calculate expected returns and covariance matrix for MPT.
 
         Args:
@@ -220,7 +221,7 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
             return expected_returns, cov_matrix
 
     def _optimize_mean_variance(
-        self, expected_returns: dict[str, float], cov_matrix: np.ndarray
+        self, expected_returns: dict[str, float], cov_matrix: npt.NDArray[np.float_]
     ) -> dict[str, float]:
         """Optimize portfolio using mean-variance optimization.
 
@@ -236,8 +237,8 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
             n_assets = len(symbols)
 
             # Objective function: minimize portfolio variance
-            def objective(weights):
-                return weights.T @ cov_matrix @ weights
+            def objective(weights: npt.NDArray[np.float_]) -> float:
+                return float(weights.T @ cov_matrix @ weights)
 
             # Constraints
             constraints = [
@@ -273,7 +274,7 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
             return {symbol: 1.0 / len(expected_returns) for symbol in expected_returns}
 
     def _optimize_maximum_sharpe(
-        self, expected_returns: dict[str, float], cov_matrix: np.ndarray
+        self, expected_returns: dict[str, float], cov_matrix: npt.NDArray[np.float_]
     ) -> dict[str, float]:
         """Optimize portfolio to maximize Sharpe ratio.
 
@@ -292,9 +293,9 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
             mu = np.array([expected_returns[symbol] for symbol in symbols])
 
             # Objective function: minimize negative Sharpe ratio
-            def objective(weights):
-                portfolio_return = weights.T @ mu
-                portfolio_risk = np.sqrt(weights.T @ cov_matrix @ weights)
+            def objective(weights: npt.NDArray[np.float_]) -> float:
+                portfolio_return = float(weights.T @ mu)
+                portfolio_risk = float(np.sqrt(weights.T @ cov_matrix @ weights))
                 return (
                     -(portfolio_return - self.risk_free_rate) / portfolio_risk
                     if portfolio_risk > 0
@@ -334,7 +335,7 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
             self.logger.error(f"Error in maximum Sharpe optimization: {e}")
             return {symbol: 1.0 / len(expected_returns) for symbol in expected_returns}
 
-    def _optimize_minimum_variance(self, cov_matrix: np.ndarray) -> dict[str, float]:
+    def _optimize_minimum_variance(self, cov_matrix: npt.NDArray[np.float_]) -> dict[str, float]:
         """Optimize portfolio to minimize variance.
 
         Args:
@@ -347,8 +348,8 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
             n_assets = cov_matrix.shape[0]
 
             # Objective function: minimize portfolio variance
-            def objective(weights):
-                return weights.T @ cov_matrix @ weights
+            def objective(weights: npt.NDArray[np.float_]) -> float:
+                return float(weights.T @ cov_matrix @ weights)
 
             # Constraints
             constraints = [
@@ -385,7 +386,10 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
             return {symbol: 1.0 / len(self.symbols) for symbol in self.symbols}
 
     def _optimize_target_return(
-        self, expected_returns: dict[str, float], cov_matrix: np.ndarray, target_return: float
+        self,
+        expected_returns: dict[str, float],
+        cov_matrix: npt.NDArray[np.float_],
+        target_return: float | None,
     ) -> dict[str, float]:
         """Optimize portfolio to achieve target return with minimum risk.
 
@@ -398,6 +402,10 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
             Dictionary of optimal weights
         """
         try:
+            desired_return = target_return if target_return is not None else self.target_return
+            if desired_return is None:
+                desired_return = float(np.mean(list(expected_returns.values())))
+
             symbols = list(expected_returns.keys())
             n_assets = len(symbols)
 
@@ -405,13 +413,16 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
             mu = np.array([expected_returns[symbol] for symbol in symbols])
 
             # Objective function: minimize portfolio variance
-            def objective(weights):
-                return weights.T @ cov_matrix @ weights
+            def objective(weights: npt.NDArray[np.float_]) -> float:
+                return float(weights.T @ cov_matrix @ weights)
 
             # Constraints
             constraints = [
                 {'type': 'eq', 'fun': lambda w: np.sum(w) - 1},  # Sum of weights = 1
-                {'type': 'eq', 'fun': lambda w: w.T @ mu - target_return},  # Target return
+                {
+                    'type': 'eq',
+                    'fun': lambda w, target=desired_return: w.T @ mu - target,
+                },
                 {'type': 'ineq', 'fun': lambda w: w},  # Weights >= 0
             ]
 
@@ -443,7 +454,10 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
             return {symbol: 1.0 / len(expected_returns) for symbol in expected_returns}
 
     def _optimize_target_risk(
-        self, expected_returns: dict[str, float], cov_matrix: np.ndarray, target_risk: float
+        self,
+        expected_returns: dict[str, float],
+        cov_matrix: npt.NDArray[np.float_],
+        target_risk: float | None,
     ) -> dict[str, float]:
         """Optimize portfolio to achieve target risk with maximum return.
 
@@ -456,6 +470,10 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
             Dictionary of optimal weights
         """
         try:
+            desired_risk = target_risk if target_risk is not None else self.target_risk
+            if desired_risk is None:
+                desired_risk = float(np.std(list(expected_returns.values())))
+
             symbols = list(expected_returns.keys())
             n_assets = len(symbols)
 
@@ -463,16 +481,16 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
             mu = np.array([expected_returns[symbol] for symbol in symbols])
 
             # Objective function: maximize portfolio return
-            def objective(weights):
-                return -weights.T @ mu  # Negative for maximization
+            def objective(weights: npt.NDArray[np.float_]) -> float:
+                return float(-weights.T @ mu)
 
             # Constraints
             constraints = [
                 {'type': 'eq', 'fun': lambda w: np.sum(w) - 1},  # Sum of weights = 1
                 {
                     'type': 'eq',
-                    'fun': lambda w: np.sqrt(w.T @ cov_matrix @ w) - target_risk,
-                },  # Target risk
+                    'fun': (lambda w, target=desired_risk: np.sqrt(w.T @ cov_matrix @ w) - target),
+                },
                 {'type': 'ineq', 'fun': lambda w: w},  # Weights >= 0
             ]
 
@@ -504,7 +522,10 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
             return {symbol: 1.0 / len(expected_returns) for symbol in expected_returns}
 
     def _calculate_portfolio_metrics(
-        self, weights: dict[str, float], expected_returns: dict[str, float], cov_matrix: np.ndarray
+        self,
+        weights: dict[str, float],
+        expected_returns: dict[str, float],
+        cov_matrix: npt.NDArray[np.float_],
     ) -> tuple[float, float]:
         """Calculate portfolio return and risk.
 
@@ -590,6 +611,7 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
 
         portfolio_actions = []
 
+        filters = cast(SignalFilterConfig, self.config.signal_filters)
         for signal in signals:
             symbol = signal.get('symbol')
             if not symbol or symbol not in self.symbols:
@@ -600,7 +622,7 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
             strength = signal.get('strength', 1.0)
 
             # Filter signals based on confidence
-            if confidence < self.config.signal_filters.min_confidence:
+            if confidence < filters.min_confidence:
                 continue
 
             # Calculate target position size based on MPT weight
@@ -690,9 +712,14 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
         if hasattr(self.portfolio, 'positions') and symbol in self.portfolio.positions:
             position = self.portfolio.positions[symbol]
             if isinstance(position, dict):
-                return position.get('market_value', 0.0)
-            else:
-                return getattr(position, 'quantity', 0) * getattr(position, 'current_price', 0)
+                value = position.get('market_value', 0.0)
+                try:
+                    return float(value)
+                except (TypeError, ValueError):
+                    return 0.0
+            quantity = float(getattr(position, 'quantity', 0.0) or 0.0)
+            price = float(getattr(position, 'current_price', 0.0) or 0.0)
+            return quantity * price
 
         return 0.0
 
@@ -779,7 +806,10 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
         return summary
 
     def calculate_efficient_frontier(
-        self, expected_returns: dict[str, float], cov_matrix: np.ndarray, num_points: int = 20
+        self,
+        expected_returns: dict[str, float],
+        cov_matrix: npt.NDArray[np.float_],
+        num_points: int = 20,
     ) -> list[tuple[float, float]]:
         """Calculate efficient frontier points.
 
@@ -801,9 +831,9 @@ class ModernPortfolioTheoryStrategy(BasePortfolioStrategy):
             )
 
             # Calculate maximum return portfolio
+            max_symbol = max(expected_returns, key=lambda sym: expected_returns[sym])
             max_return_weights = {
-                symbol: 1.0 if symbol == max(expected_returns, key=expected_returns.get) else 0.0
-                for symbol in symbols
+                symbol: 1.0 if symbol == max_symbol else 0.0 for symbol in symbols
             }
             max_return, _ = self._calculate_portfolio_metrics(
                 max_return_weights, expected_returns, cov_matrix

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import pandas as pd
 import pytest
 
-from backtester.core.event_bus import EventBus, EventFilter
-from backtester.core.events import MarketDataEvent, create_market_data_event
+from backtester.core.event_bus import Event, EventBus, EventFilter
+from backtester.core.events import MarketDataEvent, SignalEvent, create_market_data_event
 from backtester.strategy.orchestration import (
     BaseStrategyOrchestrator,
     ConflictResolutionStrategy,
@@ -87,10 +89,12 @@ def test_sequential_orchestrator_respects_priority_and_dependencies() -> None:
     orchestrator.register_strategy("beta", beta, kind=StrategyKind.SIGNAL, priority=1)
 
     captured: list[str] = []
-    event_bus.subscribe(
-        lambda event: captured.append(event.signal_type.value),
-        EventFilter(event_types={"SIGNAL"}),
-    )
+
+    def _capture(event: Event) -> None:
+        signal_event = cast(SignalEvent, event)
+        captured.append(signal_event.signal_type.value)
+
+    event_bus.subscribe(_capture, EventFilter(event_types={"SIGNAL"}))
 
     data = _base_data()
     result = orchestrator.on_market_data(_build_market_event("SPY", data), data)

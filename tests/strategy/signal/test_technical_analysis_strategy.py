@@ -1,5 +1,6 @@
 """Tests for technical analysis strategy."""
 
+from typing import Any, cast
 from unittest.mock import Mock, patch
 
 import numpy as np
@@ -40,7 +41,7 @@ class TestTechnicalAnalysisStrategy:
             momentum_indicators=["RSI", "Stochastic"],
             volatility_indicators=["BollingerBands", "ATR"],
             volume_indicators=["OBV", "VolumeSMA"],
-            signal_generation_rules="trend_following",
+            signal_generation_rules=cast(Any, "trend_following"),
         )
 
     @pytest.fixture

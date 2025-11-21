@@ -12,7 +12,7 @@ import pandas as pd
 
 from backtester.core.config import RiskConfigView
 from backtester.core.event_bus import EventBus, EventFilter
-from backtester.core.events import PortfolioUpdateEvent, create_risk_alert_event
+from backtester.core.events import Event, PortfolioUpdateEvent, create_risk_alert_event
 from backtester.risk_management.component_configs.comprehensive_risk_config import (
     ComprehensiveRiskConfig,
 )
@@ -95,7 +95,7 @@ class RiskControlManager:
             EventFilter(event_types={'PORTFOLIO_UPDATE'}),
         )
 
-    def _handle_portfolio_event(self, event: PortfolioUpdateEvent) -> None:
+    def _handle_portfolio_event(self, event: Event) -> None:
         """React to portfolio updates by evaluating risk and publishing alerts."""
         if not isinstance(event, PortfolioUpdateEvent):
             return

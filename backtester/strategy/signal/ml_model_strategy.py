@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 from backtester.model.base_model import BaseModel
-from backtester.model.model_configs import ModelConfig
+from backtester.model.model_configs import ModelConfig as CoreModelConfig
 
 from .base_signal_strategy import BaseSignalStrategy
 from .signal_strategy_config import MLModelStrategyConfig, SignalStrategyConfig
@@ -20,7 +21,7 @@ class ModelFactory:
     """Lightweight factory wrapper so tests can patch create()."""
 
     @staticmethod
-    def create(model_name: str, config: ModelConfig) -> BaseModel:
+    def create(model_name: str, config: CoreModelConfig) -> BaseModel[Any]:
         """Create a model instance using the project level factory when available."""
         try:
             from backtester.model.model_factory import ModelFactory as CoreModelFactory
@@ -29,9 +30,15 @@ class ModelFactory:
         except Exception:
             # Fallback to sklearn implementation for environments where the full factory
             # is not wired up (e.g. unit tests with heavy dependencies stripped out).
+            from backtester.model.model_configs import SklearnModelConfig
             from backtester.model.sklearn_models import SklearnModel
 
-            return SklearnModel(config)
+            sklearn_config = (
+                config
+                if isinstance(config, SklearnModelConfig)
+                else SklearnModelConfig(**config.model_dump())
+            )
+            return SklearnModel(sklearn_config)
 
 
 class MLModelStrategy(BaseSignalStrategy):
@@ -44,7 +51,12 @@ class MLModelStrategy(BaseSignalStrategy):
     ) -> None:
         """Normalize configuration wrapping and prepare model registry."""
         if isinstance(config, SignalStrategyConfig):
-            inner_config = config.strategy_config  # type: ignore[assignment]
+            strategy_config = config.strategy_config
+            if not isinstance(strategy_config, MLModelStrategyConfig):
+                raise TypeError(
+                    "SignalStrategyConfig passed to MLModelStrategy must wrap MLModelStrategyConfig."
+                )
+            inner_config = strategy_config
             outer_config: SignalStrategyConfig | None = config
         else:
             inner_config = config
@@ -52,7 +64,7 @@ class MLModelStrategy(BaseSignalStrategy):
 
         super().__init__(inner_config, event_bus)
         self.config = outer_config or inner_config
-        self.strategy_config = inner_config
+        self.strategy_config: MLModelStrategyConfig = inner_config
         self.name = inner_config.name
 
         self.prediction_horizon = inner_config.prediction_horizon
@@ -68,15 +80,24 @@ class MLModelStrategy(BaseSignalStrategy):
         self.target_column = inner_config.target_column
         self.feature_columns = inner_config.feature_columns
 
-        self._model_configs: dict[str, ModelConfig] = {
-            model.model_name: model for model in inner_config.models
-        }
-        self.models: dict[str, BaseModel] = {}
+        self._model_configs: dict[str, CoreModelConfig] = {}
+        model_definitions: Sequence[Any] = cast(Sequence[Any], inner_config.models)
+        for config_entry in model_definitions:
+            if isinstance(config_entry, dict):
+                payload = dict(config_entry)
+            elif hasattr(config_entry, 'model_dump'):
+                payload = cast(dict[str, Any], config_entry.model_dump())
+            else:
+                raise TypeError(f"Unsupported model config type: {type(config_entry).__name__}")
+            resolved_config = CoreModelConfig(**payload)
+            self._model_configs[resolved_config.model_name] = resolved_config
+
+        self.models: dict[str, BaseModel[Any]] = {}
 
     # ---------------------------------------------------------------------#
     # Helpers
     # ---------------------------------------------------------------------#
-    def _get_model_instance(self, model_config: ModelConfig) -> BaseModel:
+    def _get_model_instance(self, model_config: CoreModelConfig) -> BaseModel[Any]:
         model = self.models.get(model_config.model_name)
         if model is None:
             model = ModelFactory.create(model_config.model_name, model_config)
@@ -176,9 +197,12 @@ class MLModelStrategy(BaseSignalStrategy):
 
         for config in self._model_configs.values():
             model = self._get_model_instance(config)
-            required_cols: Iterable[str] = []
-            if hasattr(model, 'get_required_columns'):
-                required_cols = model.get_required_columns()  # type: ignore[assignment]
+            required_cols: Iterable[str] = ()
+            get_columns = getattr(model, 'get_required_columns', None)
+            if callable(get_columns):
+                candidate = get_columns()
+                if isinstance(candidate, Iterable):
+                    required_cols = candidate
             missing = [col for col in required_cols if col not in features.columns]
             if missing:
                 return False
@@ -188,12 +212,18 @@ class MLModelStrategy(BaseSignalStrategy):
         results: dict[str, Any] = {}
         for config in self._model_configs.values():
             model = self._get_model_instance(config)
-            if hasattr(model, 'train'):
-                results[config.model_name] = model.train(features, target)  # type: ignore[attr-defined]
+            train_fn = getattr(model, 'train', None)
+            if callable(train_fn):
+                results[config.model_name] = train_fn(features, target)
         return results
 
-    def _predict_with_model(self, model: BaseModel, features: pd.DataFrame) -> np.ndarray:
-        predictions = model.predict(features)  # type: ignore[attr-defined]
+    def _predict_with_model(
+        self, model: BaseModel[Any], features: pd.DataFrame
+    ) -> npt.NDArray[np.float_]:
+        predict_fn = getattr(model, 'predict', None)
+        if not callable(predict_fn):
+            return np.array([], dtype=float)
+        predictions = predict_fn(features)
         if isinstance(predictions, dict):
             predictions = predictions.get('prediction', [])
         predictions_array = np.asarray(predictions, dtype=float)
@@ -204,7 +234,7 @@ class MLModelStrategy(BaseSignalStrategy):
 
     def _convert_predictions_to_signals(
         self,
-        predictions: np.ndarray,
+        predictions: npt.NDArray[np.float_],
         model: Any,
         market_data: pd.DataFrame,
     ) -> list[dict[str, Any]]:
@@ -243,22 +273,21 @@ class MLModelStrategy(BaseSignalStrategy):
 
     def _ensemble_predictions(
         self,
-        models: list[BaseModel],
+        models: Sequence[BaseModel[Any]],
         features: pd.DataFrame,
         method: str,
-    ) -> np.ndarray:
+    ) -> npt.NDArray[np.float_]:
         if not models:
-            return np.array([])
+            return np.array([], dtype=float)
 
         model_outputs = [self._predict_with_model(model, features) for model in models]
         stacked = np.vstack(model_outputs)
 
-        result: np.ndarray
+        result: npt.NDArray[np.float_]
         if method.lower() == 'voting':
             votes = np.round(stacked).astype(int)
             result = (votes.sum(axis=0) >= (len(models) / 2)).astype(int)
-
-        if method.lower() in {'averaging', 'weighted_average', 'confidence_weighted'}:
+        elif method.lower() in {'averaging', 'weighted_average', 'confidence_weighted'}:
             result = stacked.mean(axis=0)
         else:
             result = stacked.mean(axis=0)
@@ -270,7 +299,7 @@ class MLModelStrategy(BaseSignalStrategy):
 
     def _calculate_feature_importance(
         self,
-        model: BaseModel,
+        model: BaseModel[Any],
         features: pd.DataFrame,
     ) -> dict[str, float]:
         if hasattr(model, 'feature_importances_'):
@@ -280,9 +309,9 @@ class MLModelStrategy(BaseSignalStrategy):
 
         variances = features.var().replace(0, np.nan).fillna(0.0)
         scaled = variances / (variances.sum() + 1e-12)
-        return scaled.to_dict()
+        return cast(dict[str, float], scaled.to_dict())
 
-    def _should_retrain(self, model: BaseModel, data: pd.DataFrame) -> bool:
+    def _should_retrain(self, model: BaseModel[Any], data: pd.DataFrame) -> bool:
         performance = getattr(model, 'performance_metrics', {})
         accuracy = performance.get('accuracy') if isinstance(performance, dict) else None
         if accuracy is not None and accuracy >= 0.9:

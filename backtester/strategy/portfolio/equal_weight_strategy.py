@@ -5,12 +5,12 @@ capital equally across all assets in the portfolio.
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 
 from .base_portfolio_strategy import BasePortfolioStrategy
-from .portfolio_strategy_config import PortfolioStrategyConfig
+from .portfolio_strategy_config import PortfolioStrategyConfig, SignalFilterConfig
 
 
 class EqualWeightStrategy(BasePortfolioStrategy):
@@ -103,6 +103,7 @@ class EqualWeightStrategy(BasePortfolioStrategy):
 
         portfolio_actions = []
 
+        filters = cast(SignalFilterConfig, self.config.signal_filters)
         for signal in signals:
             symbol = signal.get('symbol')
             if not symbol or symbol not in self.symbols:
@@ -113,7 +114,7 @@ class EqualWeightStrategy(BasePortfolioStrategy):
             strength = signal.get('strength', 1.0)
 
             # Filter signals based on confidence
-            if confidence < self.config.signal_filters.min_confidence:
+            if confidence < filters.min_confidence:
                 continue
 
             # Calculate target position size based on equal weight
@@ -235,9 +236,14 @@ class EqualWeightStrategy(BasePortfolioStrategy):
         if hasattr(self.portfolio, 'positions') and symbol in self.portfolio.positions:
             position = self.portfolio.positions[symbol]
             if isinstance(position, dict):
-                return position.get('market_value', 0.0)
-            else:
-                return getattr(position, 'quantity', 0) * getattr(position, 'current_price', 0)
+                value = position.get('market_value', 0.0)
+                try:
+                    return float(value)
+                except (TypeError, ValueError):
+                    return 0.0
+            quantity = float(getattr(position, 'quantity', 0.0) or 0.0)
+            price = float(getattr(position, 'current_price', 0.0) or 0.0)
+            return quantity * price
 
         return 0.0
 

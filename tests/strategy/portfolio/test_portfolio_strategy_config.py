@@ -133,6 +133,8 @@ class TestPortfolioStrategyConfig:
     def test_full_config_creation(self, full_config_dict):
         """Test full configuration creation."""
         config = PortfolioStrategyConfig(**full_config_dict)
+        assert isinstance(config.risk_budget, RiskBudget)
+        assert isinstance(config.signal_filters, SignalFilterConfig)
 
         assert config.strategy_name == "test_strategy"
         assert config.strategy_type == PortfolioStrategyType.RISK_PARITY
@@ -153,6 +155,8 @@ class TestPortfolioStrategyConfig:
         config = PortfolioStrategyConfig(
             strategy_name="test_strategy", symbols=["AAPL", "GOOGL", "MSFT"]
         )
+        assert isinstance(config.risk_budget, RiskBudget)
+        assert isinstance(config.signal_filters, SignalFilterConfig)
 
         assert config.strategy_type == PortfolioStrategyType.EQUAL_WEIGHT
         assert config.constraints.min_weight == 0.0
@@ -342,6 +346,7 @@ class TestPortfolioStrategyConfig:
     def test_get_risk_budget_equal(self, full_config_dict):
         """Test getting risk budget with equal method."""
         config = PortfolioStrategyConfig(**full_config_dict)
+        assert isinstance(config.risk_budget, RiskBudget)
         config.risk_budget.risk_budget_method = RiskBudgetMethod.EQUAL
 
         risk_budget = config.get_risk_budget()
@@ -353,6 +358,7 @@ class TestPortfolioStrategyConfig:
     def test_get_risk_budget_custom(self, full_config_dict):
         """Test getting risk budget with custom method."""
         config = PortfolioStrategyConfig(**full_config_dict)
+        assert isinstance(config.risk_budget, RiskBudget)
         config.risk_budget.risk_budget_method = RiskBudgetMethod.CUSTOM
 
         risk_budget = config.get_risk_budget()

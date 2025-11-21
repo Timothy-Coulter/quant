@@ -5,13 +5,14 @@ capital based on risk contribution rather than equal weights.
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 from .base_portfolio_strategy import BasePortfolioStrategy
-from .portfolio_strategy_config import PortfolioStrategyConfig
+from .portfolio_strategy_config import PortfolioStrategyConfig, RiskBudget, SignalFilterConfig
 
 
 class RiskParityStrategy(BasePortfolioStrategy):
@@ -38,16 +39,15 @@ class RiskParityStrategy(BasePortfolioStrategy):
         self.lookback_period = config.optimization_params.lookback_period
         self.risk_free_rate = config.optimization_params.risk_free_rate
         self.target_risk_contribution = 1.0 / len(self.symbols) if self.symbols else 0.0
-        self.risk_budget_method = (
-            config.risk_budget.risk_budget_method if config.risk_budget else "equal"
-        )
+        budget = cast(RiskBudget, config.risk_budget)
+        self.risk_budget_method = budget.risk_budget_method
         self.enable_rebalancing = config.enable_rebalancing
         self.min_position_size = config.min_position_size
         self.max_position_size = config.max_position_size
 
         # Risk calculation parameters
         self.volatility_history: dict[str, list[float]] = {symbol: [] for symbol in self.symbols}
-        self.covariance_history: list[np.ndarray] = []
+        self.covariance_history: list[npt.NDArray[np.float_]] = []
         self.risk_contribution_history: list[dict[str, float]] = []
 
         # Performance tracking
@@ -160,7 +160,7 @@ class RiskParityStrategy(BasePortfolioStrategy):
             return {symbol: 1.0 / len(self.symbols) for symbol in self.symbols}
 
     def _calculate_risk_contribution_weights(
-        self, volatilities: dict[str, float], cov_matrix: np.ndarray
+        self, volatilities: dict[str, float], cov_matrix: npt.NDArray[np.float_]
     ) -> dict[str, float]:
         """Calculate risk contribution weights.
 
@@ -260,6 +260,7 @@ class RiskParityStrategy(BasePortfolioStrategy):
 
         portfolio_actions = []
 
+        filters = cast(SignalFilterConfig, self.config.signal_filters)
         for signal in signals:
             symbol = signal.get('symbol')
             if not symbol or symbol not in self.symbols:
@@ -270,7 +271,7 @@ class RiskParityStrategy(BasePortfolioStrategy):
             strength = signal.get('strength', 1.0)
 
             # Filter signals based on confidence
-            if confidence < self.config.signal_filters.min_confidence:
+            if confidence < filters.min_confidence:
                 continue
 
             # Calculate target position size based on risk parity weight
@@ -398,9 +399,14 @@ class RiskParityStrategy(BasePortfolioStrategy):
         if hasattr(self.portfolio, 'positions') and symbol in self.portfolio.positions:
             position = self.portfolio.positions[symbol]
             if isinstance(position, dict):
-                return position.get('market_value', 0.0)
-            else:
-                return getattr(position, 'quantity', 0) * getattr(position, 'current_price', 0)
+                value = position.get('market_value', 0.0)
+                try:
+                    return float(value)
+                except (TypeError, ValueError):
+                    return 0.0
+            quantity = float(getattr(position, 'quantity', 0.0) or 0.0)
+            price = float(getattr(position, 'current_price', 0.0) or 0.0)
+            return quantity * price
 
         return 0.0
 
