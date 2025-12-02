@@ -17,7 +17,7 @@ from backtester.core.event_bus import EventFilter
 from backtester.strategy.orchestration import StrategyKind
 from backtester.strategy.signal.base_signal_strategy import BaseSignalStrategy
 from backtester.strategy.signal.momentum_strategy import MomentumStrategy
-from tests.integration.stubs import capture_processed_signals, install_engine_stubs
+from integration_tests.stubs import capture_processed_signals, install_engine_stubs
 
 
 def _sample_market_data(rows: int = 5) -> pd.DataFrame:

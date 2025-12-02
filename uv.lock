@@ -2057,6 +2057,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pyclean"
+version = "3.4.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ce/9d/7a34b7e563bb2bc19721a23fc50b57bf01c28b663f103e75d073b4f1a8e8/pyclean-3.4.0.tar.gz", hash = "sha256:e4c25c343c6b4a42d9cb177256415a6c539f2f6ad1fa1f1763f911e465136d35", size = 26682, upload-time = "2025-11-06T20:34:29.833Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6f/60/632062055018530b1f00dcfbbbfdc8d9e3df8209eb6e1e8856a79af04a61/pyclean-3.4.0-py3-none-any.whl", hash = "sha256:a58dd5d15ed77f021855a651ba21f83ffc178e12ca1e32d23faf3258676c3ac7", size = 27046, upload-time = "2025-11-06T20:34:28.617Z" },
+]
+
+[[package]]
 name = "pycparser"
 version = "2.23"
 source = { registry = "https://pypi.org/simple" }
@@ -2236,6 +2245,7 @@ dependencies = [
     { name = "pandas" },
     { name = "pillow" },
     { name = "plotly" },
+    { name = "pyclean" },
     { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "rich" },
@@ -2285,6 +2295,7 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.2,<2.3" },
     { name = "pillow", specifier = ">=10.4" },
     { name = "plotly", specifier = ">=5.24" },
+    { name = "pyclean", specifier = ">=3.4.0" },
     { name = "pydantic", specifier = ">=2.7" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3" },
     { name = "pytest-rerunfailures", marker = "extra == 'dev'", specifier = ">=14.0" },

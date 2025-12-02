@@ -33,6 +33,7 @@ dependencies = [
   "jupyterlab>=4.2",
   "notebook>=7.0",
   "findatapy>=0.1.40",
+  "pyclean>=3.4.0",
 ]
 
 [project.optional-dependencies]
@@ -63,9 +64,8 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["backtester*"]
+include = ["backtester*", "tests*"]
 exclude = [
-  "tests*",
   "unit_tests*",
   "smoke_tests*",
   "docs*",
@@ -75,6 +75,9 @@ exclude = [
   "data*",
   "misc*",
 ]
+
+[tool.setuptools]
+py-modules = ["main"]
 
 [tool.black]
 line-length = 100

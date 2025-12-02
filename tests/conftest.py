@@ -4,8 +4,6 @@ This module provides pytest configuration, fixtures, and shared test utilities
 that are used across all test modules.
 """
 
-import os
-import sys
 import warnings
 from datetime import datetime
 from typing import Any
@@ -23,10 +21,6 @@ from backtester.core.config import (
     PortfolioConfig,
     StrategyConfig,
 )
-
-# Add the parent directory to the path to import backtester modules
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 
 # Pytest configuration
 warnings.filterwarnings(

@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Ensure repo root is always importable (xdist workers sometimes change cwd)
+if [[ ":${PYTHONPATH:-}:" != *":$SCRIPT_DIR:"* ]]; then
+  export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}$SCRIPT_DIR"
+fi
+
   usage() {
   cat <<'USAGE'
 dev.sh <command>
@@ -46,7 +52,7 @@ fi
     ;;
   typecheck)
     echo "[typecheck] mypy"
-    uv run --with mypy mypy .
+    uv run --with mypy,types-PyYAML mypy .
     ;;
   test)
     echo "[test] pytest (uses pyproject addopts)"

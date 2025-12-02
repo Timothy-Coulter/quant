@@ -21,7 +21,7 @@ def main() -> None:
 
         loss = nn.functional.mse_loss(model(x), y)
         optimizer.zero_grad()
-        loss.backward()  # type: ignore
+        loss.backward()  # type: ignore[no-untyped-call]
         optimizer.step()
 
         if epoch % 2 == 0:

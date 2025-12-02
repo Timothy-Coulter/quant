@@ -12,7 +12,7 @@ from backtester.core.backtest_engine import BacktestEngine
 from backtester.core.config import BacktesterConfig
 from backtester.core.event_bus import EventFilter
 from backtester.strategy.signal.momentum_strategy import MomentumStrategy
-from tests.integration.stubs import install_engine_stubs
+from integration_tests.stubs import install_engine_stubs
 
 
 def _sample_market_data(rows: int = 4) -> pd.DataFrame:
