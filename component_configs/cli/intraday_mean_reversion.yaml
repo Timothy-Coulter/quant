@@ -1,0 +1,13 @@
+__config_class__: CLIPreset
+description: 1h mean-reversion intraday run with tighter stops.
+config_path: ../core/intraday_mean_reversion.yaml
+args:
+  - --ticker
+  - MSFT
+  - --ticker
+  - AAPL
+  - --freq
+  - 1h
+env:
+  BACKTEST_DATE_PRESET: month
+  BACKTEST_STRATEGY_NAME: mean_reversion_strategy

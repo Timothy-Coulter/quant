@@ -1,0 +1,162 @@
+__config_class__: BacktesterConfig
+data:
+  __config_class__: DataRetrievalConfig
+  data_source: yahoo
+  tickers:
+    - SPY
+    - QQQ
+  fields:
+    - open
+    - high
+    - low
+    - close
+    - volume
+  start_date: 2023-01-01
+  finish_date: 2023-12-31
+  freq: daily
+  gran_freq: null
+  freq_mult: 1
+  cache_algo: internet_load_return
+  environment: backtest
+  cut: NYC
+  cache_ttl_seconds: 600
+  cache_max_entries: 512
+  push_to_cache: true
+strategy:
+  __config_class__: StrategyConfig
+  strategy_name: momentum_strategy
+  ma_short: 10
+  ma_long: 30
+  leverage_base: 1.0
+  leverage_alpha: 2.0
+  base_to_alpha_split: 0.2
+  alpha_to_base_split: 0.2
+  stop_loss_base: 0.02
+  stop_loss_alpha: 0.025
+  take_profit_target: 0.08
+portfolio:
+  __config_class__: PortfolioConfig
+  portfolio_strategy_name: general
+  initial_capital: 100000.0
+  commission_rate: 0.0005
+  interest_rate_daily: 0.0001
+  spread_rate: 0.0002
+  slippage_std: 0.0004
+  funding_enabled: true
+  tax_rate: 0.30
+  max_positions: 15
+  leverage_base: 1.0
+  leverage_alpha: 1.0
+  base_to_alpha_split: 0.2
+  alpha_to_base_split: 0.2
+  stop_loss_base: 0.02
+  stop_loss_alpha: 0.02
+  take_profit_target: 0.08
+  maintenance_margin: 0.5
+  max_total_leverage: 2.0
+  cash: 0.0
+execution:
+  __config_class__: ExecutionConfig
+  commission_rate: 0.001
+  min_commission: 1.0
+  spread: 0.0002
+  slippage_model: normal
+  slippage_distribution: normal
+  slippage_std: 0.0007
+  latency_ms: 2.0
+  latency_jitter_ms: 1.0
+  max_orders_per_minute: 120
+  order_cooldown_seconds: 0.0
+risk:
+  __config_class__: ComprehensiveRiskConfig
+  max_portfolio_risk: 0.02
+  max_position_size: 0.12
+  max_leverage: 3.0
+  max_drawdown: 0.20
+  stop_loss_pct: 0.02
+  take_profit_pct: 0.08
+  max_daily_loss: 0.04
+  volatility_threshold: 0.03
+  correlation_limit: 0.7
+  enable_dynamic_hedging: false
+  stress_test_frequency: monthly
+  rebalance_frequency: weekly
+  risk_attribution_enabled: true
+  factor_analysis_enabled: true
+  stop_loss_config:
+    __config_class__: StopLossConfig
+    stop_loss_type: PERCENTAGE
+    stop_loss_value: 0.02
+    trail_distance: 0.008
+    trail_step: 0.003
+    max_loss_value: null
+    activation_price: null
+    trailing_stop_pct: 0.04
+  take_profit_config:
+    __config_class__: TakeProfitConfig
+    take_profit_type: PERCENTAGE
+    take_profit_value: 0.08
+    trail_distance: 0.015
+    trail_step: 0.005
+    max_gain_value: null
+    activation_price: null
+    trailing_take_profit_pct: 0.03
+  position_sizing_config:
+    __config_class__: PositionSizingConfig
+    max_position_size: 0.12
+    min_position_size: 0.01
+    risk_per_trade: 0.015
+    sizing_method: fixed_percentage
+    max_daily_trades: 5
+    max_sector_exposure: 0.30
+    max_correlation: 0.75
+    volatility_adjustment: true
+  risk_limits_config:
+    __config_class__: RiskLimitConfig
+    max_drawdown: 0.20
+    max_leverage: 3.0
+    max_single_position: 0.15
+    max_portfolio_var: 0.05
+    max_daily_loss: 0.04
+    max_sector_exposure: 0.30
+    max_correlation: 0.75
+    max_volatility: 0.25
+    concentration_limit: 0.25
+    min_diversification_ratio: 0.65
+    max_country_exposure: 0.55
+    max_industry_exposure: 0.25
+    max_positions: 40
+    min_position_size: 0.01
+    risk_profile: moderate
+    alert_threshold_pct: 0.8
+    emergency_halt_threshold: 0.93
+    auto_rebalance_trigger: true
+    max_loss_streak_days: 5
+    cooling_off_period_days: 2
+    stress_test_frequency: monthly
+    monte_carlo_simulations: 8000
+    var_confidence_level: 0.95
+    hard_limits: true
+    require_approval_above: 0.9
+  risk_monitoring_config:
+    __config_class__: RiskMonitoringConfig
+    check_interval: 90
+    enable_real_time_alerts: true
+    max_history_size: 750
+    volatility_threshold: 0.25
+    drawdown_threshold: 0.15
+    leverage_threshold: 3.0
+    var_threshold: 0.06
+    correlation_threshold: 0.8
+    lookback_period: 180
+    confidence_level: 0.95
+    generate_dashboard_data: true
+    reporting_frequency: weekly
+performance:
+  __config_class__: PerformanceConfig
+  risk_free_rate: 0.02
+  benchmark_enabled: true
+  benchmark_symbol: SPY
+data_period_days: 1
+maximum_period_between_trade: 30
+trade_immediately_after_stop: true

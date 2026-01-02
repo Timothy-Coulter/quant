@@ -1,0 +1,108 @@
+__config_class__: ComprehensiveRiskConfig
+max_portfolio_risk: 0.03
+max_position_size: 0.18
+max_leverage: 6.0
+max_drawdown: 0.30
+stop_loss_pct: 0.025
+take_profit_pct: 0.12
+max_daily_loss: 0.06
+volatility_threshold: 0.05
+correlation_limit: 0.8
+enable_dynamic_hedging: true
+stress_test_frequency: weekly
+rebalance_frequency: daily
+risk_attribution_enabled: true
+factor_analysis_enabled: true
+stop_loss_config:
+  __config_class__: StopLossConfig
+  stop_loss_type: TRAILING_PERCENTAGE
+  stop_loss_value: 0.03
+  trail_distance: 0.01
+  trail_step: 0.005
+  max_loss_value: null
+  activation_price: null
+  trailing_stop_pct: 0.04
+take_profit_config:
+  __config_class__: TakeProfitConfig
+  take_profit_type: TRAILING_PERCENTAGE
+  take_profit_value: 0.12
+  trail_distance: 0.02
+  trail_step: 0.01
+  max_gain_value: null
+  activation_price: null
+  trailing_take_profit_pct: 0.05
+position_sizing_config:
+  __config_class__: PositionSizingConfig
+  max_position_size: 0.18
+  min_position_size: 0.01
+  risk_per_trade: 0.03
+  sizing_method: kelly
+  max_daily_trades: 8
+  max_sector_exposure: 0.35
+  max_correlation: 0.85
+  volatility_adjustment: true
+  conviction_factors:
+    low: 0.8
+    medium: 1.1
+    high: 1.4
+  kelly_win_rate: 0.55
+  kelly_avg_win: 1.5
+  kelly_avg_loss: 1.0
+risk_limits_config:
+  __config_class__: RiskLimitConfig
+  max_drawdown: 0.30
+  max_leverage: 6.0
+  max_single_position: 0.18
+  max_portfolio_var: 0.08
+  max_daily_loss: 0.06
+  max_sector_exposure: 0.35
+  max_correlation: 0.85
+  max_volatility: 0.35
+  concentration_limit: 0.30
+  min_diversification_ratio: 0.60
+  max_country_exposure: 0.65
+  max_industry_exposure: 0.30
+  max_positions: 50
+  min_position_size: 0.01
+  risk_profile: aggressive
+  alert_threshold_pct: 0.85
+  emergency_halt_threshold: 0.97
+  auto_rebalance_trigger: true
+  max_loss_streak_days: 7
+  cooling_off_period_days: 1
+  stress_test_frequency: weekly
+  monte_carlo_simulations: 12000
+  var_confidence_level: 0.95
+  hard_limits: false
+  require_approval_above: 0.92
+risk_monitoring_config:
+  __config_class__: RiskMonitoringConfig
+  check_interval: 60
+  enable_real_time_alerts: true
+  max_history_size: 1000
+  volatility_threshold: 0.35
+  drawdown_threshold: 0.20
+  leverage_threshold: 6.0
+  var_threshold: 0.08
+  correlation_threshold: 0.9
+  lookback_period: 126
+  confidence_level: 0.95
+  alert_escalation_rules:
+    low: []
+    medium:
+      - reduce_position_sizes
+    high:
+      - reduce_position_sizes
+      - increase_cash_position
+    critical:
+      - emergency_reduction
+      - halt_trading
+  track_metrics:
+    - volatility
+    - drawdown
+    - leverage
+    - var
+    - correlation
+    - concentration
+  generate_dashboard_data: true
+  reporting_frequency: daily

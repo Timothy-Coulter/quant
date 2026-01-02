@@ -183,7 +183,7 @@ addopts = [
     "--reruns", "3",                 # pytest-rerunfailures: retry failed tests 3 times
     "--reruns-delay", "0.1"          # pytest-rerunfailures: 0.1 second delay between retries
 ]
-testpaths = ["tests", "unit_tests"]
+testpaths = ["tests", "unit_tests", "smoke_tests", "integration_tests"]
 markers = [
     "unit: fast unit tests",
     "integration: integration test suite",

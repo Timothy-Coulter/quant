@@ -1,0 +1,10 @@
+__config_class__: IndicatorConfig
+indicator_name: macd_default
+factory_name: macd
+indicator_type: momentum
+fast_period: 12
+slow_period: 26
+signal_period: 9
+price_column: close
+signal_sensitivity: 1.0
+confidence_threshold: 0.55

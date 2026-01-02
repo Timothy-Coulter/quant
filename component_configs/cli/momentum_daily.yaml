@@ -1,0 +1,15 @@
+__config_class__: CLIPreset
+description: Daily SPY/QQQ momentum with retail execution defaults.
+config_path: ../core/momentum_daily.yaml
+args:
+  - --ticker
+  - SPY
+  - --ticker
+  - QQQ
+  - --start-date
+  - 2023-01-01
+  - --freq
+  - daily
+env:
+  BACKTEST_STRATEGY_MA_SHORT: "10"
+  BACKTEST_STRATEGY_MA_LONG: "30"

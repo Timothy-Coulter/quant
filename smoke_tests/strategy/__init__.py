@@ -1,0 +1,1 @@
+"""Strategy smoke tests package."""

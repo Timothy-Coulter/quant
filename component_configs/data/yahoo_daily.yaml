@@ -1,0 +1,24 @@
+__config_class__: DataRetrievalConfig
+data_source: yahoo
+tickers:
+  - SPY
+  - QQQ
+fields:
+  - open
+  - high
+  - low
+  - close
+  - volume
+start_date: 2023-01-01
+finish_date: 2023-12-31
+freq: daily
+gran_freq: null
+freq_mult: 1
+cache_algo: internet_load_return
+environment: backtest
+cut: NYC
+cache_ttl_seconds: 600
+cache_max_entries: 512
+push_to_cache: true
+split_request_chunks: 0
+list_threads: 4

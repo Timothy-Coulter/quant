@@ -1,0 +1,13 @@
+__config_class__: SignalPayload
+signal_type: BUY
+action: breakout_long
+confidence: 0.82
+timestamp: 2024-01-02T14:30:00Z
+metadata:
+  symbol: SPY
+  rationale: "Price broke 20d high with 1.5x volume confirmation"
+  indicators:
+    ema_fast: cross_up
+    rsi: 65
+  stop_loss_pct: 0.01
+  take_profit_pct: 0.04

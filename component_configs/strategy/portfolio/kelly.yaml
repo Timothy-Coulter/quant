@@ -1,0 +1,55 @@
+__config_class__: PortfolioStrategyConfig
+strategy_name: kelly_conviction
+strategy_type: kelly_criterion
+symbols:
+  - SPY
+  - QQQ
+  - MSFT
+constraints:
+  min_weight: 0.0
+  max_weight: 0.5
+  min_position_size: 0.01
+  max_position_size: 0.35
+optimization_params:
+  optimization_method: kelly_criterion
+  lookback_period: 126
+  risk_free_rate: 0.02
+  rebalance_threshold: 0.04
+risk_budget:
+  risk_budget_method: custom
+  risk_budgets:
+    SPY: 0.34
+    QQQ: 0.33
+    MSFT: 0.33
+  risk_contribution_targets:
+    SPY: 0.34
+    QQQ: 0.33
+    MSFT: 0.33
+  volatility_target: 0.18
+  var_confidence: 0.95
+risk_parameters:
+  max_drawdown: 0.22
+  var_confidence: 0.95
+  max_position_size: 0.35
+  max_sector_exposure: 0.5
+  max_correlation: 0.85
+  volatility_target: 0.18
+  kelly_fraction: 0.25
+  min_win_rate: 0.4
+signal_filters:
+  min_confidence: 0.6
+  max_confidence: 1.0
+  min_strength: 0.2
+  max_strength: 1.0
+  min_signal_duration: 1
+  max_signal_duration: 60
+performance_metrics:
+  benchmark_symbol: SPY
+  risk_free_rate: 0.02
+rebalance_frequency: weekly
+enable_rebalancing: true
+min_position_size: 0.01
+max_position_size: 0.35
+allocation_method: kelly_criterion
+custom_parameters:
+  conviction_scaling: true

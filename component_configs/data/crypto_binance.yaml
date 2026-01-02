@@ -1,0 +1,25 @@
+__config_class__: DataRetrievalConfig
+data_source: binance
+tickers:
+  - BTC-USD
+  - ETH-USD
+fields:
+  - open
+  - high
+  - low
+  - close
+  - volume
+start_date: year
+finish_date: null
+freq: intraday
+gran_freq: 1h
+freq_mult: 1
+cache_algo: internet_load_return
+environment: prod
+trade_side: trade
+cut: UTC
+split_request_chunks: 0
+list_threads: 2
+cache_ttl_seconds: 900
+cache_max_entries: 128
+push_to_cache: true

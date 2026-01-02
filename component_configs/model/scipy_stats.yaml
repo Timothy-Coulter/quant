@@ -1,0 +1,19 @@
+__config_class__: SciPyModelConfig
+model_name: pearson_corr_signal
+model_type: regression
+framework: scipy
+lookback_period: 90
+prediction_horizon: 1
+train_test_split: 0.8
+validation_split: 0.2
+signal_threshold: 0.5
+confidence_threshold: 0.55
+scipy_function: stats.pearsonr
+function_params:
+  alternative: two-sided
+optimization_method: null
+feature_columns:
+  - close
+  - volume
+target_column: close
+normalize_features: false

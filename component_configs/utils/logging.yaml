@@ -1,0 +1,15 @@
+__config_class__: LoggingConfig
+level: INFO
+format: "%(asctime)s [%(levelname)s] %(name)s - %(message)s"
+datefmt: "%Y-%m-%d %H:%M:%S"
+propagate: false
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: standard
+formatters:
+  standard:
+    format: "%(asctime)s [%(levelname)s] %(run_id)s %(name)s - %(message)s"
+extra:
+  run_id_env: BACKTEST_RUN_ID

@@ -1,0 +1,99 @@
+__config_class__: SignalStrategyConfig
+name: momentum_default
+description: Multi-timeframe momentum with EMA crossover and RSI confirmation.
+enabled: true
+strategy_type: momentum
+symbols:
+  - SPY
+  - QQQ
+indicators:
+  - __config_class__: IndicatorConfig
+    indicator_name: ema_fast
+    factory_name: ema
+    indicator_type: trend
+    period: 12
+    ma_type: exponential
+    price_column: close
+  - __config_class__: IndicatorConfig
+    indicator_name: ema_slow
+    factory_name: ema
+    indicator_type: trend
+    period: 26
+    ma_type: exponential
+    price_column: close
+  - __config_class__: IndicatorConfig
+    indicator_name: rsi
+    factory_name: rsi
+    indicator_type: momentum
+    period: 14
+    overbought_threshold: 70
+    oversold_threshold: 30
+signal_filters:
+  - filter_name: confidence_floor
+    filter_type: threshold
+    parameters:
+      min_confidence: 0.55
+    enabled: true
+risk_parameters:
+  max_position_size: 0.1
+  stop_loss_percentage: 0.03
+  take_profit_percentage: 0.08
+  max_drawdown: 0.2
+  risk_per_trade: 0.02
+  correlation_limit: 0.75
+execution_params:
+  execution_type: market
+  slippage_percentage: 0.0008
+  commission_percentage: 0.0005
+  min_order_size: 100.0
+  max_order_size: 100000.0
+  timeout_seconds: 20
+parameters: {}
+log_level: INFO
+monitor_performance: true
+performance_metrics:
+  - sharpe_ratio
+  - max_drawdown
+strategy_config:
+  name: momentum_default
+  strategy_type: momentum
+  strategy_name: momentum_default
+  symbols:
+    - SPY
+    - QQQ
+  indicators: []
+  signal_filters: []
+  risk_parameters:
+    max_position_size: 0.1
+    stop_loss_percentage: 0.03
+    take_profit_percentage: 0.08
+    max_drawdown: 0.2
+    risk_per_trade: 0.02
+    correlation_limit: 0.75
+  execution_params:
+    execution_type: market
+    slippage_percentage: 0.0008
+    commission_percentage: 0.0005
+    min_order_size: 100.0
+    max_order_size: 100000.0
+    timeout_seconds: 20
+  momentum_period: 20
+  momentum_threshold: 0.02
+  acceleration_threshold: 0.01
+  volume_confirmation: true
+  min_volume_multiplier: 1.2
+  use_multiple_timeframes: true
+  timeframes:
+    - 5
+    - 10
+    - 20
+  momentum_weighting: equal
+  use_breakout_signals: true
+  use_divergence_signals: true
+  use_trend_following: true
+  trend_confirmation: true
+  volatility_filter: false
+  min_volume_threshold: 0.0
+  strategy_parameters: {}
+  momentum_periods:
+    - 20

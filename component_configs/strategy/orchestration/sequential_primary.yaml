@@ -1,0 +1,33 @@
+__config_class__: OrchestrationConfig
+orchestrator_type: sequential
+strategies:
+  - identifier: primary_momentum
+    kind: signal
+    role: primary
+    weight: 1.0
+    priority: 0
+    depends_on: []
+    enabled: true
+    parameters: {}
+  - identifier: hedging_portfolio
+    kind: portfolio
+    role: auxiliary
+    weight: 0.5
+    priority: 1
+    depends_on:
+      - primary_momentum
+    enabled: true
+    parameters:
+      hedge_ratio: 0.5
+coordination_rules:
+  - rule_type: sequence
+    primary: primary_momentum
+    secondary:
+      - hedging_portfolio
+    parameters:
+      wait_for_signal: true
+conflict_resolution: highest_confidence
+performance_aggregation: weighted
+evaluation_window: 1
+metadata:
+  description: "Sequentially run signal then allocation with optional hedge."

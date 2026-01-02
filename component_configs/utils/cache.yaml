@@ -1,0 +1,7 @@
+__config_class__: CacheConfig
+data_cache_dir: ./data/cache
+indicator_cache_dir: ./data/indicator_cache
+ttl_seconds: 900
+max_entries: 256
+policy: lru
+compress: false

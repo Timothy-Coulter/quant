@@ -1,0 +1,10 @@
+__config_class__: SignalPayload
+signal_type: HOLD
+action: de_risk_portfolio
+confidence: 0.6
+timestamp: 2024-01-02T15:00:00Z
+metadata:
+  note: "Broad volatility spike triggered risk-off posture"
+  symbol: QQQ
+  volatility: 0.35
+  correlation_cluster: high

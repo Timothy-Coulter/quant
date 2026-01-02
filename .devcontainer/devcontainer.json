@@ -59,7 +59,9 @@
         "ms-toolsai.jupyter",
         "gaogaotiantian.viztracer-vscode",
         "openai.chatgpt",
-        "RooVeterinaryInc.roo-cline"
+        "RooVeterinaryInc.roo-cline",
+        "ms-python.debugpy",
+        "ms-python.vscode-python-envs"
       ]
     }
   },

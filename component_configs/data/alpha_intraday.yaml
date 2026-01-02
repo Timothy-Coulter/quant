@@ -1,0 +1,27 @@
+__config_class__: DataRetrievalConfig
+data_source: alpha_vantage
+tickers:
+  - MSFT
+  - AAPL
+fields:
+  - open
+  - high
+  - low
+  - close
+  - volume
+start_date: 2024-01-01
+finish_date: null
+freq: intraday
+gran_freq: 1h
+freq_mult: 1
+cache_algo: internet_load_return
+environment: backtest
+cut: NYC
+resample: 1h
+resample_how: last
+split_request_chunks: 5
+list_threads: 2
+cache_ttl_seconds: 300
+cache_max_entries: 256
+push_to_cache: true
+alpha_vantage_api_key: "${ALPHA_VANTAGE_API_KEY}"

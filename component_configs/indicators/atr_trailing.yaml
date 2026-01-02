@@ -1,0 +1,9 @@
+__config_class__: IndicatorConfig
+indicator_name: atr_trailing
+factory_name: atr
+indicator_type: volatility
+period: 14
+atr_multiplier: 2.0
+price_column: close
+calculate_realtime: true
+cache_calculations: true

@@ -1,0 +1,95 @@
+__config_class__: SignalStrategyConfig
+name: mean_reversion_pairs
+description: Bollinger/mean reversion with correlation filter for pairs.
+enabled: true
+strategy_type: mean_reversion
+symbols:
+  - SPY
+  - DIA
+indicators:
+  - __config_class__: IndicatorConfig
+    indicator_name: bollinger_wide
+    factory_name: bollinger_bands
+    indicator_type: volatility
+    period: 20
+    standard_deviations: 2.5
+  - __config_class__: IndicatorConfig
+    indicator_name: ema_base
+    factory_name: ema
+    indicator_type: trend
+    period: 20
+    ma_type: exponential
+signal_filters:
+  - filter_name: correlation_gate
+    filter_type: correlation
+    parameters:
+      min_correlation: 0.6
+    enabled: true
+risk_parameters:
+  max_position_size: 0.08
+  stop_loss_percentage: 0.025
+  take_profit_percentage: 0.06
+  max_drawdown: 0.18
+  risk_per_trade: 0.015
+  correlation_limit: 0.7
+execution_params:
+  execution_type: limit
+  slippage_percentage: 0.0005
+  commission_percentage: 0.0004
+  min_order_size: 100.0
+  max_order_size: 75000.0
+  timeout_seconds: 30
+parameters: {}
+log_level: INFO
+monitor_performance: true
+performance_metrics:
+  - sharpe_ratio
+  - max_drawdown
+strategy_config:
+  name: mean_reversion_pairs
+  strategy_type: mean_reversion
+  strategy_name: mean_reversion_pairs
+  symbols:
+    - SPY
+    - DIA
+  indicators: []
+  signal_filters: []
+  risk_parameters:
+    max_position_size: 0.08
+    stop_loss_percentage: 0.025
+    take_profit_percentage: 0.06
+    max_drawdown: 0.18
+    risk_per_trade: 0.015
+    correlation_limit: 0.7
+  execution_params:
+    execution_type: limit
+    slippage_percentage: 0.0005
+    commission_percentage: 0.0004
+    min_order_size: 100.0
+    max_order_size: 75000.0
+    timeout_seconds: 30
+  mean_period: 20
+  std_dev_period: 20
+  z_score_threshold: 2.0
+  bollinger_band_period: 20
+  bollinger_band_std: 2.0
+  use_multiple_means: true
+  mean_periods:
+    - 10
+    - 20
+    - 50
+  std_dev_periods:
+    - 20
+  use_hurst_exponent: false
+  hurst_threshold: 0.5
+  use_statistical_arbitrage: true
+  use_pairs_trading: true
+  mean_reversion_speed: 0.1
+  max_deviation: 3.0
+  min_reversion_strength: 0.05
+  volume_confirmation: true
+  volatility_adjustment: true
+  regime_filter: true
+  correlation_threshold: 0.6
+  strategy_parameters: {}
+  min_volume_multiplier: 1.2

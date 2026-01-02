@@ -1,0 +1,11 @@
+__config_class__: SimulatedBrokerConfig
+commission_rate: 0.0002
+min_commission: 0.5
+spread: 0.00005
+slippage_model: normal
+slippage_distribution: normal
+slippage_std: 0.0002
+latency_ms: 0.5
+latency_jitter_ms: 0.25
+max_orders_per_minute: 1800
+order_cooldown_seconds: 0.0

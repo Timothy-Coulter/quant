@@ -1,0 +1,37 @@
+__config_class__: OrchestrationConfig
+orchestrator_type: ensemble
+strategies:
+  - identifier: momentum_signal
+    kind: signal
+    role: primary
+    weight: 0.6
+    priority: 0
+    depends_on: []
+    enabled: true
+    parameters: {}
+  - identifier: mean_reversion_signal
+    kind: signal
+    role: auxiliary
+    weight: 0.4
+    priority: 1
+    depends_on: []
+    enabled: true
+    parameters: {}
+coordination_rules:
+  - rule_type: threshold
+    primary: momentum_signal
+    secondary:
+      - mean_reversion_signal
+    parameters:
+      confidence_threshold: 0.6
+  - rule_type: fallback
+    primary: mean_reversion_signal
+    secondary:
+      - momentum_signal
+    parameters:
+      max_latency_ms: 50
+conflict_resolution: weighted_merge
+performance_aggregation: weighted
+evaluation_window: 5
+metadata:
+  description: "Blend momentum and mean-reversion signals with confidence gating."

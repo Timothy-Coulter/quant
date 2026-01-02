@@ -1,0 +1,28 @@
+__config_class__: PyTorchModelConfig
+model_name: mlp_forecaster
+model_type: forecasting
+framework: pytorch
+lookback_period: 60
+prediction_horizon: 1
+train_test_split: 0.75
+validation_split: 0.1
+signal_threshold: 0.5
+confidence_threshold: 0.6
+model_architecture:
+  layers:
+    - 64
+    - 64
+  activation: relu
+  dropout: 0.1
+training_config:
+  optimizer: adam
+  lr: 0.001
+  batch_size: 64
+  epochs: 25
+  weight_decay: 0.0001
+device: cuda
+input_shape:
+  - 60
+  - 5
+enable_monitoring: true
+retrain_threshold: 0.7

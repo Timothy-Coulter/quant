@@ -1,0 +1,117 @@
+__config_class__: SignalStrategyConfig
+name: ml_directional
+description: ML ensemble with indicator features and confidence gating.
+enabled: true
+strategy_type: ml_model
+symbols:
+  - AAPL
+  - MSFT
+indicators:
+  - __config_class__: IndicatorConfig
+    indicator_name: ema_fast
+    factory_name: ema
+    indicator_type: trend
+    period: 10
+    ma_type: exponential
+    price_column: close
+  - __config_class__: IndicatorConfig
+    indicator_name: atr_trailing
+    factory_name: atr
+    indicator_type: volatility
+    period: 14
+signal_filters:
+  - filter_name: confidence_gate
+    filter_type: threshold
+    parameters:
+      min_confidence: 0.6
+    enabled: true
+models:
+  - model_name: rf_classifier
+    model_type: classification
+    framework: sklearn
+    target_column: close
+    lookback_period: 30
+    train_test_split: 0.8
+    parameters:
+      n_estimators: 150
+      max_depth: 6
+  - model_name: lstm_forecaster
+    model_type: forecasting
+    framework: pytorch
+    target_column: close
+    lookback_period: 60
+    train_test_split: 0.8
+    parameters:
+      hidden_size: 64
+      num_layers: 2
+risk_parameters:
+  max_position_size: 0.1
+  stop_loss_percentage: 0.03
+  take_profit_percentage: 0.1
+  max_drawdown: 0.25
+  risk_per_trade: 0.02
+  correlation_limit: 0.8
+execution_params:
+  execution_type: market
+  slippage_percentage: 0.001
+  commission_percentage: 0.0006
+  min_order_size: 100.0
+  max_order_size: 150000.0
+  timeout_seconds: 30
+parameters: {}
+log_level: INFO
+monitor_performance: true
+performance_metrics:
+  - sharpe_ratio
+  - max_drawdown
+  - profit_factor
+strategy_config:
+  name: ml_directional
+  strategy_type: ml_model
+  strategy_name: ml_directional
+  symbols:
+    - AAPL
+    - MSFT
+  models:
+    - model_name: rf_classifier
+      model_type: classification
+      framework: sklearn
+      target_column: close
+      lookback_period: 30
+      train_test_split: 0.8
+      parameters:
+        n_estimators: 150
+        max_depth: 6
+    - model_name: lstm_forecaster
+      model_type: forecasting
+      framework: pytorch
+      target_column: close
+      lookback_period: 60
+      train_test_split: 0.8
+      parameters:
+        hidden_size: 64
+        num_layers: 2
+  indicators: []
+  signal_filters: []
+  risk_parameters:
+    max_position_size: 0.1
+    stop_loss_percentage: 0.03
+    take_profit_percentage: 0.1
+    max_drawdown: 0.25
+    risk_per_trade: 0.02
+    correlation_limit: 0.8
+  execution_params:
+    execution_type: market
+    slippage_percentage: 0.001
+    commission_percentage: 0.0006
+    min_order_size: 100.0
+    max_order_size: 150000.0
+    timeout_seconds: 30
+  prediction_horizon: 1
+  confidence_threshold: 0.65
+  min_prediction_strength: 0.1
+  use_ensemble: true
+  ensemble_weights:
+    rf_classifier: 0.5
+    lstm_forecaster: 0.5
+  strategy_parameters: {}
